@@ -49,7 +49,7 @@ struct SlideshowView: View {
     var toolBar: some View {
         VStack(alignment: .center) {
             if let a = album, showAlbumName {
-                Text(a.albumName).font(.title3).foregroundColor(.white).padding()
+                Text(a.albumName).font(.title3).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8)).padding()
             }
             HStack {
                 HStack(alignment: .center, spacing: 40){

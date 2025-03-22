@@ -44,7 +44,7 @@ struct ContentView: View {
                     ProgressView()
                 })
             }
-            Text(album.albumName).font(.caption).foregroundColor(.black.opacity(0.8))
+            Text(album.albumName).font(.caption).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
         }
         //.frame(width: 300, height: 200)
         .cornerRadius(15)
@@ -104,6 +104,8 @@ struct ContentView: View {
                    alblumsExists = false
                    print("Error fetching albums: \(error)")
                }
+           }.onAppear {
+               immichService.loadSettings()
            }
         }.background(.black)
     }

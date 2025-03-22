@@ -41,7 +41,7 @@ struct SearchView: View {
             HStack(alignment: .top){
                 VStack(spacing: 40) {
                     HStack {
-                        TextField("Search Immich", text: $searchText, onCommit: {
+                        TextField("Smart Search", text: $searchText, onCommit: {
                             Task {
                                 do {
                                     searchResults = try await immichService.searchAssets(query: searchText)
@@ -91,8 +91,4 @@ struct SearchView: View {
         }
         .navigationViewStyle(.stack) // Ensures consistent navigation behavior
     }
-}
-
-#Preview {
-    SearchView()
 }
