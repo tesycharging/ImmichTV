@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "AppIconLarge.png",
       "idiom" : "tv"
     }
   ],

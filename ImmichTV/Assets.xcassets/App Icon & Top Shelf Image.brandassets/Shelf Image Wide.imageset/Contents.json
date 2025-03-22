@@ -1,10 +1,12 @@
 {
   "images" : [
     {
+      "filename" : "Titelloses 4.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
+      "filename" : "Titelloses 4x2.png",
       "idiom" : "tv",
       "scale" : "2x"
     }
