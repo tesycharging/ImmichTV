@@ -12,6 +12,7 @@ struct SettingView: View {
     @State var baseURL = ""
     @State var apikey = "" //mpFsRtifpNr8voop2uKKoMv4a1rPNwtw5lvzxuTGbY
     @State var slideShowOfThumbnails = false
+    @State private var timeinterval = "5"
     @State var storage: Storage?
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
     
@@ -23,8 +24,9 @@ struct SettingView: View {
                 .frame(width: UIScreen.main.bounds.width - 20)
                 .onAppear {
                     baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "https://demo.immich.app:2283"
-                    apikey = UserDefaults.standard.string(forKey: "apikey") ?? "XOBPgCeFUPauOBdKtypsKUnWRYLFhqCphsHJ3bwVC8"
+                    apikey = UserDefaults.standard.string(forKey: "apikey") ?? ""
                     slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
+                    timeinterval = UserDefaults.standard.string(forKey: "timeinterval") ?? "5"
                     Task {@MainActor in
                         do {
                             storage = try await immichService.getStorage()
@@ -42,11 +44,30 @@ struct SettingView: View {
             Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
                 .padding()
                 .frame(width: UIScreen.main.bounds.width - 20)
+            TextField("time interval of slideshow", text: $timeinterval).keyboardType(.numberPad)
+                .onChange(of: timeinterval) { newValue in
+                                    let filtered = newValue.filter { $0.isNumber } // Allow only numbers
+                                    if let number = Double(filtered) {
+                                        if number < 3 {
+                                            timeinterval = "3"
+                                        } else if number > 10 {
+                                            timeinterval = "10"
+                                        } else {
+                                            timeinterval = filtered
+                                        }
+                                    } else {
+                                        timeinterval = "5" // Default if invalid input
+                                    }
+                                }
+                .textFieldStyle(PlainTextFieldStyle())
+                .padding()
+                .frame(width: UIScreen.main.bounds.width - 20)
             
             Button("update settings") {
                 UserDefaults.standard.set(baseURL, forKey: "baseURL")
                 UserDefaults.standard.set(apikey, forKey: "apikey")
                 UserDefaults.standard.set(slideShowOfThumbnails, forKey: "slideShowOfThumbnails")
+                UserDefaults.standard.set(timeinterval, forKey: "timeinterval")
                 immichService.loadSettings()
                 dismiss()
             }.buttonStyle(DefaultButtonStyle())

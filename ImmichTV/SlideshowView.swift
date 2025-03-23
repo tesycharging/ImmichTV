@@ -242,7 +242,7 @@ struct SlideshowView: View {
          stopSlideshow() // Ensure no existing timer
          showAlbumName = true
          if !assetItems.isEmpty && startSlideShow {
-             timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+             timer = Timer.scheduledTimer(withTimeInterval: Double(immichService.timeinterval) ?? 5, repeats: true) { _ in
                  withAnimation {
                      currentIndex = (currentIndex + 1) % assetItems.count
                      showAlbumName = false
