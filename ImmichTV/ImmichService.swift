@@ -135,7 +135,6 @@ class ImmichService: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let response = try decoder.decode(SearchResponse.self, from: data)
-            print(response.assets.items)
             return response.assets.items//.filter{ $0.type == .image}
         }
     }

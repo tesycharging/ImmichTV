@@ -25,6 +25,8 @@ struct SettingView: View {
                 .onAppear {
                     baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "https://demo.immich.app:2283"
                     apikey = UserDefaults.standard.string(forKey: "apikey") ?? ""
+                    baseURL = "http://192.168.8.171:2283"
+                    apikey = "bPuir4NxOS4jE6kwfZbwT5RlItD8GeO31WskEsrjx0"
                     slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
                     timeinterval = UserDefaults.standard.string(forKey: "timeinterval") ?? "5"
                     Task {@MainActor in

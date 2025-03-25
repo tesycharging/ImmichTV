@@ -11,19 +11,16 @@ import AVKit
 struct SlideshowView: View {
     let album: Album?
     let search: Bool
-    @State private var startSlideShow: Bool
+    @State private var running = true
     @State private var assetItems: [AssetItem] = []
     @StateObject private var immichService = ImmichService()
     @State private var currentIndex = 0
     @State private var isLoading = true
-    @State private var timer: Timer?
-    @State private var showAlbumName = false
+    @State private var showAlbumName = true
     @State private var thumbnail = true
     @State private var isBarVisible: Bool = true // Controls bar visibility
     @FocusState private var focusedButton: String?
-    @State private var player: AVPlayer?
-    @State private var isVideoFinished = false
-    @State private var remoting = false
+    @StateObject private var playerViewModel = PlayerViewModel()
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
         
     
@@ -31,7 +28,7 @@ struct SlideshowView: View {
         self.album = album
         self.search = false
         self.assetItems = []
-        self.startSlideShow = true
+        self.running = true
     }
     
     init(searchResults: [AssetItem], id: String? = nil, start: Bool = true) {
@@ -43,7 +40,7 @@ struct SlideshowView: View {
                 self._currentIndex = State(initialValue: index)
             }
         }
-        self._startSlideShow = State(initialValue: start)
+        self._running = State(initialValue: start)
     }
     
     var toolBar: some View {
@@ -54,9 +51,8 @@ struct SlideshowView: View {
             HStack {
                 HStack(alignment: .center, spacing: 40){
                     Button(action: {
-                        currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
-                        thumbnail = true
-                        remoting = false
+                        isBarVisible = true
+                        self.goToPreviousItem()
                         hideToolbarAfterDelay()
                     }) {
                         Image(systemName: "backward.frame").scaleEffect(focusedButton == "privious" ? 1.1 : 1.0)
@@ -65,25 +61,28 @@ struct SlideshowView: View {
                     .focused($focusedButton, equals: "privious")
                     .buttonStyle(PlainButtonStyle()) // Ensure no default styling interferes
                     Button(action: {
-                        if timer == nil && !assetItems.isEmpty {
-                            thumbnail = true
-                            remoting = false
-                            hideToolbarAfterDelay()
-                            startSlideShow = true
-                            startSlideshow()
-                        } else if timer != nil {
-                            stopSlideshow()
+                        isBarVisible = true
+                        running.toggle()
+                        if running {
+                            showAlbumName = true
+                            if assetItems[currentIndex].type == .image || (thumbnail && immichService.slideShowOfThumbnails) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
+                                    goToNextItem()
+                                }
+                            } else {
+                                goToNextItem()
+                            }
                         }
+                        hideToolbarAfterDelay()
                     }) {
-                        Image(systemName: (timer == nil ? "play" : "pause")).scaleEffect(focusedButton == "playpause" ? 1.1 : 1.0)
+                        Image(systemName: (!running ? "play" : "pause")).scaleEffect(focusedButton == "playpause" ? 1.1 : 1.0)
                             .background(focusedButton == "playpause" ? Color.white.opacity(0.3) : Color.black.opacity(0.3)).foregroundColor(focusedButton == "playpause" ? .black : .white).padding(.horizontal, 30)
                     }
                     .focused($focusedButton, equals: "playpause")
                     .buttonStyle(PlainButtonStyle()) // Ensure no default styling interferes
                     Button(action: {
-                        currentIndex = (currentIndex + 1) % assetItems.count
-                        thumbnail = true
-                        remoting = false
+                        isBarVisible = true
+                        self.goToNextItem()
                         hideToolbarAfterDelay()
                     }) {
                         Image(systemName: "forward.frame").scaleEffect(focusedButton == "next" ? 1.1 : 1.0)
@@ -100,9 +99,9 @@ struct SlideshowView: View {
                 if immichService.slideShowOfThumbnails {
                     HStack {
                         Button(action: {
-                            stopSlideshow()
+                            isBarVisible = true
+                            running = false
                             thumbnail = false
-                            remoting = false
                             hideToolbarAfterDelay()
                         }) {
                             Image(systemName: assetItems[currentIndex].type == .video ? "video" : "photo").background(Color.gray.opacity(0.8))
@@ -115,6 +114,8 @@ struct SlideshowView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
                         .zIndex(1) // Ensure bar is above image
                 }
+            }.onAppear {
+                focusedButton = "playpause"
             }
         }
     }
@@ -144,9 +145,19 @@ struct SlideshowView: View {
                      }, placeholder: {
                          ProgressView()
                      }).frame(maxWidth: .infinity, maxHeight: .infinity)
+                         .onAppear {
+                             // Show image for 5 seconds then move to next
+                             if running {
+                                 DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
+                                     goToNextItem()
+                                 }
+                             }
+                         }
                  } else {
-                     // Use VideoPlayer (SwiftUI's built-in view) if targeting iOS 14+ or tvOS
-                     VideoPlayerView(videoURL: immichService.getImageUrl(id: assetItems[currentIndex].id, thumbnail: immichService.slideShowOfThumbnails && thumbnail, video: assetItems[currentIndex].type == .video)!, isVideoFinished: $isVideoFinished)
+                     VideoPlayer(player: playerViewModel.player).frame(maxWidth: .infinity, maxHeight: .infinity)
+                         .onAppear {
+                             setupPlayer()
+                         }
                  }
                  // Transparent bar at the bottom
                  if isBarVisible {
@@ -163,21 +174,20 @@ struct SlideshowView: View {
              switch direction {
              case .left:
                  if !isBarVisible {
-                     currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
-                     thumbnail = true
-                 } else {
-                     remoting = true
+                     self.goToPreviousItem()
+                 } else if focusedButton == nil {
+                     focusedButton = "privious"
                  }
              case .right:
                  if !isBarVisible {
-                     currentIndex = (currentIndex + 1) % assetItems.count
-                     thumbnail = true
-                 } else {
-                     remoting = true
+                     self.goToNextItem()
+                 } else if focusedButton == nil {
+                     focusedButton = "next"
                  }
              case .up:
-                 stopSlideshow()
+                 running = false
                  thumbnail = false
+                 focusedButton = "playpause"
              case .down:
                  withAnimation(.easeInOut(duration: 0.3)) {
                      isBarVisible.toggle()
@@ -187,31 +197,16 @@ struct SlideshowView: View {
                  break
              }
            }.onAppear {
-               if !assetItems.isEmpty {
-                 startSlideshow()
-             }
-             // Hide the bar after 3 seconds when the view loads
-             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                 withAnimation(.easeInOut(duration: 0.3)) {
-                     isBarVisible = true
-                     focusedButton = "playpause"
-                 }
-             }
             // Hide toolbar after 4 seconds on initial appear
             hideToolbarAfterDelay()
            }.animation(.easeInOut(duration: 1.0), value: isBarVisible)
-         .onDisappear {
-             stopSlideshow()
-         }
          .onChange(of: assetItems) { newAssets in
              if !newAssets.isEmpty {
-                 startSlideshow()
-             }
-         }
-         .onChange(of: isVideoFinished) { finished in
-             if self.isVideoFinished && !immichService.slideShowOfThumbnails {
-                 self.isVideoFinished = false
-                 startSlideshow()
+                 if running {
+                     DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
+                         goToNextItem()
+                     }
+                 }
              }
          }
      }
@@ -219,9 +214,8 @@ struct SlideshowView: View {
     private func hideToolbarAfterDelay() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
             withAnimation(.easeInOut(duration: 0.7)) {
-                if !remoting {
-                    isBarVisible = false
-                }
+                isBarVisible = false
+                showAlbumName = false
             }
         }
     }
@@ -237,86 +231,49 @@ struct SlideshowView: View {
              isLoading = false
          }
      }
-     
-     private func startSlideshow() {
-         stopSlideshow() // Ensure no existing timer
-         showAlbumName = true
-         if !assetItems.isEmpty && startSlideShow {
-             timer = Timer.scheduledTimer(withTimeInterval: Double(immichService.timeinterval) ?? 5, repeats: true) { _ in
-                 withAnimation {
-                     currentIndex = (currentIndex + 1) % assetItems.count
-                     showAlbumName = false
-                     if assetItems[currentIndex].type == .video && !immichService.slideShowOfThumbnails {
-                         stopSlideshow()
-                     } else {
-                         UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
-                     }
-                 }
-             }
-         }
-     }
-     
-     private func stopSlideshow() {
-         timer?.invalidate()
-         timer = nil
-         showAlbumName = false
-     }
-}
-
-
-struct VideoPlayerView: View {
-    // The URL of the video to play
-    let videoURL:URL
-    @Binding var isVideoFinished: Bool
-    // State to control playback
-    @State private var player: AVPlayer?
     
+    private func goToNextItem() {
+        playerViewModel.player?.pause()
+        NotificationCenter.default.removeObserver(self)
+        currentIndex = (currentIndex + 1) % assetItems.count
+        thumbnail = true
+        setupPlayer()
+        UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
+    }
     
-    var body: some View {
-        ZStack {
-            // Use VideoPlayer (SwiftUI's built-in view) if targeting iOS 14+ or tvOS
-            if let player = player {
-                VideoPlayer(player: player)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .edgesIgnoringSafeArea(.all)
-            } else {
-                Text("Loading video...")
-            }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            // Initialize the player when the view appears
-            setupPlayer()
-            setupNotification()
-        }
-        .onDisappear {
-            // Clean up when the view disappears
-            player?.pause()
-            player = nil
-            NotificationCenter.default.removeObserver(self) // Clean up observer
-        }
+    private func goToPreviousItem() {
+        playerViewModel.player?.pause()
+        NotificationCenter.default.removeObserver(self)
+        currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
+        thumbnail = true
+        setupPlayer()
     }
     
     private func setupPlayer() {
-        // Create AVPlayer with the video URL
-        player = AVPlayer(url: videoURL)
-        
-        // Optionally auto-play the video
-        player?.play()
-    }
-    
-    private func setupNotification() {
-        // Add observer for when the video finishes
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: player?.currentItem,
-            queue: .main
-        ) { _ in
-            isVideoFinished = true
-            print("Video playback finished!")
-            // Optional: Restart or perform another action
-            // player?.seek(to: .zero)
-            // player?.play()
+        if assetItems[currentIndex].type == .image || (thumbnail && immichService.slideShowOfThumbnails) { return } else {
+            playerViewModel.setupPlayer(with: immichService.getImageUrl(id: assetItems[currentIndex].id, thumbnail: immichService.slideShowOfThumbnails && thumbnail, video: assetItems[currentIndex].type == .video)!)
+            
+            // Add observer for when video ends
+            NotificationCenter.default.addObserver(
+                forName: AVPlayerItem.didPlayToEndTimeNotification,
+                object: playerViewModel.player?.currentItem,
+                queue: .main
+            ) { _ in
+                self.playerViewModel.player?.seek(to: .zero)
+                if running {
+                    goToNextItem()
+                }
+            }
         }
+    }
+}
+
+class PlayerViewModel: ObservableObject {
+    @Published var player: AVPlayer?
+    
+    func setupPlayer(with url: URL) {
+        player = AVPlayer(url: url)
+        player?.play()
     }
 }
 
