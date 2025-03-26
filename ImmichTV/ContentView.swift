@@ -82,7 +82,7 @@ struct ContentView: View {
                     .focused($focusedButton, equals: "search")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    NavigationLink(destination: SettingView(immichService: immichService)) {
+                    NavigationLink(destination: SettingView(immichService: immichService, baseURL: UserDefaults.standard.string(forKey: "baseURL") ?? "", apikey: UserDefaults.standard.string(forKey: "apikey") ?? "")) {
                         Image(systemName: "gear")
                             .padding()
                             .frame(width: 150, height: 60)

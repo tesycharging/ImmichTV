@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import AVKit
 
 struct SlideshowView: View {
@@ -19,8 +20,10 @@ struct SlideshowView: View {
     @State private var showAlbumName = true
     @State private var thumbnail = true
     @State private var isBarVisible: Bool = true // Controls bar visibility
+    @State private var timerSubscription: Cancellable?
     @FocusState private var focusedButton: String?
     @StateObject private var playerViewModel = PlayerViewModel()
+    @State private var isFavorite = false
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
         
     
@@ -43,6 +46,10 @@ struct SlideshowView: View {
         self._running = State(initialValue: start)
     }
     
+    private var timer: Publishers.Autoconnect<Timer.TimerPublisher> {
+        Timer.publish(every: (Double(immichService.timeinterval) ?? 5.0), on: .main, in: .common).autoconnect()
+    }
+    
     var toolBar: some View {
         VStack(alignment: .center) {
             if let a = album, showAlbumName {
@@ -51,9 +58,8 @@ struct SlideshowView: View {
             HStack {
                 HStack(alignment: .center, spacing: 40){
                     Button(action: {
-                        isBarVisible = true
+                        showToolbar()
                         self.goToPreviousItem()
-                        hideToolbarAfterDelay()
                     }) {
                         Image(systemName: "backward.frame").scaleEffect(focusedButton == "privious" ? 1.1 : 1.0)
                             .background(focusedButton == "privious" ? Color.white.opacity(0.3) : Color.black.opacity(0.3)).foregroundColor(focusedButton == "privious" ? .black : .white).padding(.horizontal, 30)
@@ -61,19 +67,11 @@ struct SlideshowView: View {
                     .focused($focusedButton, equals: "privious")
                     .buttonStyle(PlainButtonStyle()) // Ensure no default styling interferes
                     Button(action: {
-                        isBarVisible = true
+                        showToolbar()
                         running.toggle()
                         if running {
                             showAlbumName = true
-                            if assetItems[currentIndex].type == .image || (thumbnail && immichService.slideShowOfThumbnails) {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
-                                    goToNextItem()
-                                }
-                            } else {
-                                goToNextItem()
-                            }
                         }
-                        hideToolbarAfterDelay()
                     }) {
                         Image(systemName: (!running ? "play" : "pause")).scaleEffect(focusedButton == "playpause" ? 1.1 : 1.0)
                             .background(focusedButton == "playpause" ? Color.white.opacity(0.3) : Color.black.opacity(0.3)).foregroundColor(focusedButton == "playpause" ? .black : .white).padding(.horizontal, 30)
@@ -81,9 +79,8 @@ struct SlideshowView: View {
                     .focused($focusedButton, equals: "playpause")
                     .buttonStyle(PlainButtonStyle()) // Ensure no default styling interferes
                     Button(action: {
-                        isBarVisible = true
+                        showToolbar()
                         self.goToNextItem()
-                        hideToolbarAfterDelay()
                     }) {
                         Image(systemName: "forward.frame").scaleEffect(focusedButton == "next" ? 1.1 : 1.0)
                             .background(focusedButton == "next" ? Color.white.opacity(0.3) : Color.black.opacity(0.3)).foregroundColor(focusedButton == "next" ? .black : .white).padding(.horizontal, 30)
@@ -96,13 +93,38 @@ struct SlideshowView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
                     .zIndex(1) // Ensure bar is above image
                 Spacer()
+                if !immichService.demo {
+                    HStack {
+                        Button(action: {
+                            showToolbar()
+                            Task {@MainActor in
+                                do {
+                                    let updatedAssetItem = try await immichService.updateAssets(id: assetItems[currentIndex].id, favorite: !assetItems[currentIndex].isFavorite)
+                                    guard !assetItems.isEmpty, currentIndex < assetItems.count else { return }
+                                    isFavorite = updatedAssetItem.isFavorite
+                                    assetItems.remove(at: currentIndex)
+                                    assetItems.insert(updatedAssetItem, at: currentIndex)
+                                } catch {
+                                    print(error.localizedDescription)
+                                }
+                            }
+                        }) {
+                            Image(systemName: isFavorite ? "heart.fill" : "heart").background(Color.gray.opacity(0.8))
+                        }
+                        .focused($focusedButton, equals: "favorite")
+                        .buttonStyle(PlainButtonStyle())
+                    }.padding()
+                        .background(Color.black.opacity(0.5)) // Transparent background
+                        .cornerRadius(15)
+                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
+                        .zIndex(1) // Ensure bar is above image
+                }
                 if immichService.slideShowOfThumbnails {
                     HStack {
                         Button(action: {
-                            isBarVisible = true
+                            showToolbar()
                             running = false
                             thumbnail = false
-                            hideToolbarAfterDelay()
                         }) {
                             Image(systemName: assetItems[currentIndex].type == .video ? "video" : "photo").background(Color.gray.opacity(0.8))
                         }
@@ -146,16 +168,12 @@ struct SlideshowView: View {
                          ProgressView()
                      }).frame(maxWidth: .infinity, maxHeight: .infinity)
                          .onAppear {
-                             // Show image for 5 seconds then move to next
-                             if running {
-                                 DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
-                                     goToNextItem()
-                                 }
-                             }
+                             isFavorite = assetItems[currentIndex].isFavorite
                          }
                  } else {
                      VideoPlayer(player: playerViewModel.player).frame(maxWidth: .infinity, maxHeight: .infinity)
                          .onAppear {
+                             isFavorite = assetItems[currentIndex].isFavorite
                              setupPlayer()
                          }
                  }
@@ -175,50 +193,50 @@ struct SlideshowView: View {
              case .left:
                  if !isBarVisible {
                      self.goToPreviousItem()
-                 } else if focusedButton == nil {
-                     focusedButton = "privious"
+                 } else {
+                     if focusedButton == nil {
+                         focusedButton = "privious"
+                     }
+                     if isBarVisible {
+                         showToolbar()
+                     }
                  }
              case .right:
                  if !isBarVisible {
                      self.goToNextItem()
-                 } else if focusedButton == nil {
-                     focusedButton = "next"
+                 } else {
+                     if focusedButton == nil {
+                         focusedButton = "next"
+                     }
+                     if isBarVisible {
+                         showToolbar()
+                     }
                  }
              case .up:
                  running = false
                  thumbnail = false
                  focusedButton = "playpause"
+                 if isBarVisible {
+                     showToolbar()
+                 }
              case .down:
                  withAnimation(.easeInOut(duration: 0.3)) {
                      isBarVisible.toggle()
                      focusedButton = "playpause"
+                     if isBarVisible {
+                         showToolbar()
+                     }
                  }
              default:
                  break
              }
            }.onAppear {
-            // Hide toolbar after 4 seconds on initial appear
-            hideToolbarAfterDelay()
+               showToolbar()
            }.animation(.easeInOut(duration: 1.0), value: isBarVisible)
-         .onChange(of: assetItems) { newAssets in
-             if !newAssets.isEmpty {
-                 if running {
-                     DispatchQueue.main.asyncAfter(deadline: .now() + (Double(immichService.timeinterval) ?? 5.0)) {
-                         goToNextItem()
-                     }
-                 }
-             }
+         .onReceive(timer) { _ in
+             if running { goToNextItem() }
          }
      }
-    
-    private func hideToolbarAfterDelay() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
-            withAnimation(.easeInOut(duration: 0.7)) {
-                isBarVisible = false
-                showAlbumName = false
-            }
-        }
-    }
      
      private func loadAssets() async {
          do {
@@ -235,18 +253,25 @@ struct SlideshowView: View {
     private func goToNextItem() {
         playerViewModel.player?.pause()
         NotificationCenter.default.removeObserver(self)
-        currentIndex = (currentIndex + 1) % assetItems.count
-        thumbnail = true
-        setupPlayer()
+        if !assetItems.isEmpty {
+            currentIndex = (currentIndex + 1) % assetItems.count
+            isFavorite = assetItems[currentIndex].isFavorite
+            thumbnail = true
+            setupPlayer()
+        }
         UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private func goToPreviousItem() {
         playerViewModel.player?.pause()
         NotificationCenter.default.removeObserver(self)
-        currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
-        thumbnail = true
-        setupPlayer()
+        if !assetItems.isEmpty {
+            currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
+            isFavorite = assetItems[currentIndex].isFavorite
+            thumbnail = true
+            setupPlayer()
+        }
+        UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private func setupPlayer() {
@@ -266,6 +291,21 @@ struct SlideshowView: View {
             }
         }
     }
+    
+    // Start the timer
+      private func showToolbar() {
+          timerSubscription?.cancel()
+          timerSubscription = nil
+          isBarVisible = true
+          timerSubscription = Timer.publish(every: 10.0, on: .main, in: .common)
+              .autoconnect()
+              .sink { _ in
+                  self.isBarVisible = false
+                  showAlbumName = false
+                  timerSubscription?.cancel()
+                  timerSubscription = nil
+              }
+      }
 }
 
 class PlayerViewModel: ObservableObject {

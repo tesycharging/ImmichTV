@@ -9,11 +9,15 @@ import SwiftUI
 
 struct SettingView: View {
     var immichService: ImmichService
-    @State var baseURL = ""
-    @State var apikey = "" //mpFsRtifpNr8voop2uKKoMv4a1rPNwtw5lvzxuTGbY
+    @State var baseURL: String
+    @State var apikey: String
     @State var slideShowOfThumbnails = false
     @State private var timeinterval = "5"
     @State var storage: Storage?
+    @State var username = ""
+    @State var password = ""
+    @State private var credentialPopup = false
+    @State var message = ""
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
     
     var body: some View {
@@ -23,10 +27,7 @@ struct SettingView: View {
                 .padding()
                 .frame(width: UIScreen.main.bounds.width - 20)
                 .onAppear {
-                    baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "https://demo.immich.app:2283"
-                    apikey = UserDefaults.standard.string(forKey: "apikey") ?? ""
-                    baseURL = "http://192.168.8.171:2283"
-                    apikey = "bPuir4NxOS4jE6kwfZbwT5RlItD8GeO31WskEsrjx0"
+                    message = ""
                     slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
                     timeinterval = UserDefaults.standard.string(forKey: "timeinterval") ?? "5"
                     Task {@MainActor in
@@ -37,9 +38,28 @@ struct SettingView: View {
                         }
                     }
                 }
-            SecureField("API key", text: $apikey)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
+            HStack {
+                SecureField("API key", text: $apikey)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding()
+                Button("generate api key") {
+                    credentialPopup = true
+                }.sheet(isPresented: $credentialPopup) {
+                    CredentialsPopup(username: $username, password: $password, isPresented: $credentialPopup, onSubmit: {
+                        Task { @MainActor in
+                            do {
+                                apikey = try await immichService.createAPIKey(baseURL: baseURL + "/api", email: username, password: password)
+                                message = ""
+                            } catch {
+                                message = "Error: \(error.localizedDescription)"
+                            }
+                        }
+                    })
+                }
+            }.frame(width: UIScreen.main.bounds.width - 40)
+            Text(message)
                 .textFieldStyle(PlainTextFieldStyle())
                 .padding()
                 .frame(width: UIScreen.main.bounds.width - 20)
@@ -86,3 +106,44 @@ struct SettingView: View {
     }
 }
 
+struct CredentialsPopup: View {
+    @Binding var username: String
+    @Binding var password: String
+    @Binding var isPresented: Bool
+    var onSubmit: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Enter Credentials")
+                .font(.headline)
+            
+            TextField("Username (Email)", text: $username)
+                .autocapitalization(.none)
+                .padding(.horizontal)
+            
+            SecureField("Password", text: $password)
+                .padding(.horizontal)
+            
+            HStack(spacing: 20) {
+                Button("Cancel") {
+                    isPresented = false
+                }.buttonStyle(DefaultButtonStyle())
+                
+                Button("genarate api key") {
+                    if !username.isEmpty && !password.isEmpty {
+                        onSubmit()
+                        isPresented = false
+                    }
+                }
+                .padding()
+                .buttonStyle(DefaultButtonStyle())
+                .disabled(username.isEmpty || password.isEmpty)
+            }
+        }
+        .padding()
+        .frame(width: 800, height: 400)
+        .background(Color.black)
+        .cornerRadius(12)
+        .shadow(radius: 10)
+    }
+}

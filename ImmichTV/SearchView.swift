@@ -12,6 +12,7 @@ struct SearchView: View {
     @State private var searchText = ""
     @State private var searchResults: [AssetItem] = []
     @State private var showSlideShow = false
+    @State private var matches: Int?
     @FocusState private var focusedButton: String? // Track which button is focused
     private let gridItems = [GridItem(.adaptive(minimum: 400, maximum: 400), spacing: 80), GridItem(.adaptive(minimum: 400, maximum: 400), spacing: 80)]
     
@@ -45,6 +46,7 @@ struct SearchView: View {
                             Task {
                                 do {
                                     searchResults = try await immichService.searchAssets(query: searchText)
+                                    matches = searchResults.count
                                 } catch let error {
                                     print(error.localizedDescription)
                                 }
@@ -53,6 +55,22 @@ struct SearchView: View {
                         .textFieldStyle(PlainTextFieldStyle())
                         .frame(height: 70)
                         .padding()
+                        if !immichService.demo {
+                            Button(action: {
+                                Task {
+                                    self.searchText = ""
+                                    do {
+                                        searchResults = try await immichService.searchFavoriteAssets()
+                                        matches = searchResults.count
+                                    } catch let error {
+                                        print(error.localizedDescription)
+                                    }
+                                }
+                            }) {
+                                Image(systemName: "heart.fill")
+                                    .buttonStyle(PlainButtonStyle())
+                            }
+                        }
                         Button(action: {
                             showSlideShow = true
                         }) { // Action is empty since NavigationLink handles the tap
@@ -64,6 +82,9 @@ struct SearchView: View {
                                 .cornerRadius(10)
                         }.disabled(searchResults.isEmpty).buttonStyle(DefaultButtonStyle())
                     }.navigationTitle("Search Library")
+                    if self.matches != nil {
+                        Text("\(matches ?? 0) matches found").font(.caption)
+                    }
                     if !searchResults.isEmpty {
                         ScrollView(.vertical, showsIndicators: false) {
                             VStack(alignment: .leading, spacing: 40) {

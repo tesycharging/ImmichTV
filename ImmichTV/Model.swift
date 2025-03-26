@@ -55,12 +55,12 @@ struct AssetItem: Identifiable, Hashable, Codable, Equatable {
     let originalPath: String
     let originalFileName: String
     let originalMimeType: String
+    let isFavorite: Bool
     /*let thumbhash: String
     let fileCreatedAt: Date
     let fileModifiedAt: Date
     let localDateTime: Date
     let updatedAt: Date
-    let isFavorite: Bool
     let isArchived: Bool
     let isTrashed: Bool
     let duration: String
@@ -101,4 +101,21 @@ struct Storage: Codable {
 struct ServerStatistics: Codable {
     let photos: Int
     let usage: Int
+}
+
+// Login response
+struct LoginResponse: Codable {
+    let accessToken: String
+    let userId: String
+}
+
+// API request reposnse
+struct APIRequestResponse: Codable {
+    let secret: String
+    let apiKey: APIKeyResponse
+}
+// API key creation response
+struct APIKeyResponse: Codable {
+    let id: String
+    let name: String
 }
