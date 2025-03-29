@@ -8,11 +8,33 @@
 
 /* Begin PBXFileReference section */
 		630F3C062D888B520068BEF1 /* ImmichTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		63B1CA3D2D9452C80083C2F4 /* ImmichShow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichShow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		63B1CA562D9456BB0083C2F4 /* Exceptions for "ImmichTV" folder in "ImmichShow" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				ContentView.swift,
+				ImmichService.swift,
+				ImmichTVApp.swift,
+				Model.swift,
+				"Preview Content/Preview Assets.xcassets",
+				SearchView.swift,
+				SettingView.swift,
+				SlideshowView.swift,
+			);
+			target = 63B1CA3C2D9452C80083C2F4 /* ImmichShow */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		630F3C082D888B520068BEF1 /* ImmichTV */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				63B1CA562D9456BB0083C2F4 /* Exceptions for "ImmichTV" folder in "ImmichShow" target */,
+			);
 			path = ImmichTV;
 			sourceTree = "<group>";
 		};
@@ -20,6 +42,13 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		630F3C032D888B520068BEF1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		63B1CA3A2D9452C80083C2F4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -41,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				630F3C062D888B520068BEF1 /* ImmichTV.app */,
+				63B1CA3D2D9452C80083C2F4 /* ImmichShow.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +100,25 @@
 			productReference = 630F3C062D888B520068BEF1 /* ImmichTV.app */;
 			productType = "com.apple.product-type.application";
 		};
+		63B1CA3C2D9452C80083C2F4 /* ImmichShow */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 63B1CA482D9452CC0083C2F4 /* Build configuration list for PBXNativeTarget "ImmichShow" */;
+			buildPhases = (
+				63B1CA392D9452C80083C2F4 /* Sources */,
+				63B1CA3A2D9452C80083C2F4 /* Frameworks */,
+				63B1CA3B2D9452C80083C2F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ImmichShow;
+			packageProductDependencies = (
+			);
+			productName = ImmichIOS;
+			productReference = 63B1CA3D2D9452C80083C2F4 /* ImmichShow.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -81,6 +130,9 @@
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
 					630F3C052D888B520068BEF1 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					63B1CA3C2D9452C80083C2F4 = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
@@ -100,6 +152,7 @@
 			projectRoot = "";
 			targets = (
 				630F3C052D888B520068BEF1 /* ImmichTV */,
+				63B1CA3C2D9452C80083C2F4 /* ImmichShow */,
 			);
 		};
 /* End PBXProject section */
@@ -112,10 +165,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		63B1CA3B2D9452C80083C2F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		630F3C022D888B520068BEF1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		63B1CA392D9452C80083C2F4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -248,9 +315,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -264,13 +332,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 16.6;
+				TVOS_DEPLOYMENT_TARGET = 17.6;
 			};
 			name = Debug;
 		};
@@ -278,9 +348,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -294,13 +365,85 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 16.6;
+				TVOS_DEPLOYMENT_TARGET = 17.6;
+			};
+			name = Release;
+		};
+		63B1CA492D9452CC0083C2F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
+				DEVELOPMENT_TEAM = 99C554436R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichIOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		63B1CA4A2D9452CC0083C2F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
+				DEVELOPMENT_TEAM = 99C554436R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichIOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -321,6 +464,15 @@
 			buildConfigurations = (
 				630F3C152D888B5B0068BEF1 /* Debug */,
 				630F3C162D888B5B0068BEF1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		63B1CA482D9452CC0083C2F4 /* Build configuration list for PBXNativeTarget "ImmichShow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				63B1CA492D9452CC0083C2F4 /* Debug */,
+				63B1CA4A2D9452CC0083C2F4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

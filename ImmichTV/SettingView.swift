@@ -12,137 +12,181 @@ struct SettingView: View {
     @State var baseURL: String
     @State var apikey: String
     @State var slideShowOfThumbnails = false
-    @State private var timeinterval = "5"
+    @State var playVideo = false
+    @State private var timeinterval = 5.0
     @State var storage: Storage?
     @State var username = ""
     @State var password = ""
     @State private var credentialPopup = false
     @State var message = ""
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
+    @FocusState private var focusedButton: String? // Track which button is focused
     
     var body: some View {
         VStack {
-            TextField("http://immich-server:2283", text: $baseURL)
-                .textFieldStyle(PlainTextFieldStyle())
-                .padding()
-                .frame(width: UIScreen.main.bounds.width - 20)
-                .onAppear {
-                    message = ""
-                    slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
-                    timeinterval = UserDefaults.standard.string(forKey: "timeinterval") ?? "5"
-                    Task {@MainActor in
-                        do {
-                            storage = try await immichService.getStorage()
-                        } catch {
-                            print(error.localizedDescription)
-                        }
-                    }
-                }
-            HStack {
-                SecureField("API key", text: $apikey)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .padding()
-                Button("generate api key") {
-                    credentialPopup = true
-                }.sheet(isPresented: $credentialPopup) {
-                    CredentialsPopup(username: $username, password: $password, isPresented: $credentialPopup, onSubmit: {
-                        Task { @MainActor in
+            ScrollView(.vertical, showsIndicators: false) {
+                TextField("http://immich-server:2283", text: $baseURL).immichTVTestFieldStyle(isFocused: focusedButton == "server")
+                    .focused($focusedButton, equals: "server")
+                    .frame(width: UIScreen.main.bounds.width - 20)
+                    .onAppear {
+                        focusedButton = "server"
+                        message = ""
+                        slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
+                        playVideo = UserDefaults.standard.bool(forKey: "playVideo")
+                        timeinterval = UserDefaults.standard.double(forKey: "timeinterval")
+                        Task {@MainActor in
                             do {
-                                apikey = try await immichService.createAPIKey(baseURL: baseURL + "/api", email: username, password: password)
-                                message = ""
+                                storage = try await immichService.getStorage()
                             } catch {
-                                message = "Error: \(error.localizedDescription)"
+                                print(error.localizedDescription)
                             }
                         }
-                    })
-                }
-            }.frame(width: UIScreen.main.bounds.width - 40)
-            Text(message)
-                .textFieldStyle(PlainTextFieldStyle())
-                .padding()
-                .frame(width: UIScreen.main.bounds.width - 20)
-            Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
-                .padding()
-                .frame(width: UIScreen.main.bounds.width - 20)
-            TextField("time interval of slideshow", text: $timeinterval).keyboardType(.numberPad)
-                .onChange(of: timeinterval) { newValue in
-                                    let filtered = newValue.filter { $0.isNumber } // Allow only numbers
-                                    if let number = Double(filtered) {
-                                        if number < 3 {
-                                            timeinterval = "3"
-                                        } else if number > 10 {
-                                            timeinterval = "10"
-                                        } else {
-                                            timeinterval = filtered
-                                        }
-                                    } else {
-                                        timeinterval = "5" // Default if invalid input
+                    }
+                HStack {
+                    SecureField("API key", text: $apikey)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .immichTVTestFieldStyle(isFocused: focusedButton == "apikey")
+                        .focused($focusedButton, equals: "apikey")
+                    Button("generate api key") {
+                        credentialPopup = true
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "generate"))
+                        .focused($focusedButton, equals: "generate")
+                        .disabled(baseURL == "")
+#if os(tvOS)
+                        .sheet(isPresented: $credentialPopup) {
+                            CredentialsPopup(baseURL: $baseURL, username: $username, password: $password, isPresented: $credentialPopup, onSubmit: {
+                                Task { @MainActor in
+                                    do {
+                                        apikey = try await immichService.createAPIKey(baseURL: baseURL + "/api", email: username, password: password)
+                                        message = ""
+                                    } catch {
+                                        message = "Error: \(error.localizedDescription)"
                                     }
                                 }
-                .textFieldStyle(PlainTextFieldStyle())
-                .padding()
-                .frame(width: UIScreen.main.bounds.width - 20)
-            
-            Button("update settings") {
-                UserDefaults.standard.set(baseURL, forKey: "baseURL")
-                UserDefaults.standard.set(apikey, forKey: "apikey")
-                UserDefaults.standard.set(slideShowOfThumbnails, forKey: "slideShowOfThumbnails")
-                UserDefaults.standard.set(timeinterval, forKey: "timeinterval")
-                immichService.loadSettings()
-                dismiss()
-            }.buttonStyle(DefaultButtonStyle())
-            if let storage = self.storage {
-                Divider()
-                Text("Storage Details of Immich Server").font(.headline).padding(.horizontal, 20)
-                Text("Disk Available: \(storage.diskAvailable)").font(.caption2).padding(.horizontal, 20)
-                Text("Disk Size: \(storage.diskSize)").font(.caption2).padding(.horizontal, 20)
-                Text("Disk Usage: \(storage.diskUsagePercentage) %").font(.caption2).padding(.horizontal, 20)
-                Text("Disk Use: \(storage.diskUse)").font(.caption2).padding(.horizontal, 20)
+                            })
+                        }
+#else
+                        .popover(isPresented: $credentialPopup) {
+                            CredentialsPopup(baseURL: $baseURL, username: $username, password: $password, isPresented: $credentialPopup, onSubmit: {
+                                Task { @MainActor in
+                                    do {
+                                        apikey = try await immichService.createAPIKey(baseURL: baseURL + "/api", email: username, password: password)
+                                        message = ""
+                                    } catch {
+                                        message = "Error: \(error.localizedDescription)"
+                                    }
+                                }
+                            })
+                        }
+#endif
+                }.frame(width: UIScreen.main.bounds.width - 40)
+                Text(message)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.horizontal)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .frame(width: UIScreen.main.bounds.width - 20)
+                Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
+                    .immichTVTestFieldStyle(isFocused: focusedButton == "toggle")
+                    .focused($focusedButton, equals: "toggle")
+                    .frame(width: UIScreen.main.bounds.width - 20)
+                Toggle("play videos", isOn: $playVideo)
+                    .immichTVTestFieldStyle(isFocused: focusedButton == "video")
+                    .focused($focusedButton, equals: "video")
+                    .frame(width: UIScreen.main.bounds.width - 20)
+                    .disabled(slideShowOfThumbnails)
+                    .opacity(!slideShowOfThumbnails ? 1.0: 0.5)
+                HStack {
+                    Text("time interval of slideshow").foregroundColor(.white)
+                    Picker("Select a number", selection: $timeinterval) {
+                        ForEach(Array(stride(from: 3.0, through: 10.0, by: 1.0)), id: \.self) { number in
+                            Text("\(number, specifier: "%.1f")").tag(number)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .immichTVTestFieldStyle(isFocused: focusedButton == "picker")
+                    .focused($focusedButton, equals: "picker")
+                    .id("picker") // Assign an ID
+                    
+                    Spacer()
+                    Button("update settings") {
+                        UserDefaults.standard.set(baseURL, forKey: "baseURL")
+                        UserDefaults.standard.set(apikey, forKey: "apikey")
+                        UserDefaults.standard.set(slideShowOfThumbnails, forKey: "slideShowOfThumbnails")
+                        UserDefaults.standard.set(playVideo, forKey: "playVideo")
+                        UserDefaults.standard.set(timeinterval, forKey: "timeinterval")
+                        immichService.loadSettings()
+                        dismiss()
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "updatesettings"))
+                        .focused($focusedButton, equals: "updatesettings")
+                        .id("updateButton") // Assign an ID
+                }
+                Spacer()
+                if let storage = self.storage {
+                    Divider()
+                    Text("Storage Details of Immich Server").font(.headline).padding(.horizontal, 20)
+                    Text("Disk Available: \(storage.diskAvailable)").font(.caption2).padding(.horizontal, 20)
+                    Text("Disk Size: \(storage.diskSize)").font(.caption2).padding(.horizontal, 20)
+                    Text("Disk Usage: \(storage.diskUsagePercentage) %").font(.caption2).padding(.horizontal, 20)
+                    Text("Disk Use: \(storage.diskUse)").font(.caption2).padding(.horizontal, 20)
+                }
             }
+            #if os(tvOS)
+            .onChange(of: timeinterval) { _, _ in
+                focusedButton = "updateButton"
+            }
+            #endif
         }
         .navigationTitle("Settings")
+        .blur(radius: credentialPopup ? 10 : 0)
     }
 }
 
 struct CredentialsPopup: View {
+    @Binding var baseURL: String
     @Binding var username: String
     @Binding var password: String
     @Binding var isPresented: Bool
     var onSubmit: () -> Void
+    @FocusState private var focusedButton: String?
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Enter Credentials")
+            //Color.black.edgesIgnoringSafeArea(.all) // Full-screen background
+            Text("Enter Credentials for")
                 .font(.headline)
+            Text(baseURL)
+                .font(.caption)
             
             TextField("Username (Email)", text: $username)
                 .autocapitalization(.none)
-                .padding(.horizontal)
+                .immichTVTestFieldStyle(isFocused: focusedButton == "email")
+                .focused($focusedButton, equals: "email")
             
             SecureField("Password", text: $password)
-                .padding(.horizontal)
+                .immichTVTestFieldStyle(isFocused: focusedButton == "password")
+                .focused($focusedButton, equals: "password")
             
             HStack(spacing: 20) {
                 Button("Cancel") {
                     isPresented = false
-                }.buttonStyle(DefaultButtonStyle())
+                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "cancel"))
+                    .focused($focusedButton, equals: "cancel")
                 
                 Button("genarate api key") {
                     if !username.isEmpty && !password.isEmpty {
                         onSubmit()
                         isPresented = false
                     }
-                }
-                .padding()
-                .buttonStyle(DefaultButtonStyle())
+                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "ok"))
+                    .focused($focusedButton, equals: "ok")
                 .disabled(username.isEmpty || password.isEmpty)
             }
+            Spacer()
         }
         .padding()
-        .frame(width: 800, height: 400)
-        .background(Color.black)
+        .frame(width: 800)
         .cornerRadius(12)
         .shadow(radius: 10)
     }

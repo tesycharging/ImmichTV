@@ -42,7 +42,7 @@ struct Assets: Codable {
     let count: Int
     let items: [AssetItem]
     //let facets: [Facet]
-    //let nextPage: String? // Optional, as it could be null
+    let nextPage: String? // Optional, as it could be null
 }
 
 // Asset item (for both VIDEO and IMAGE types)
@@ -56,6 +56,7 @@ struct AssetItem: Identifiable, Hashable, Codable, Equatable {
     let originalFileName: String
     let originalMimeType: String
     let isFavorite: Bool
+    let exifInfo: ExifInfo?
     /*let thumbhash: String
     let fileCreatedAt: Date
     let fileModifiedAt: Date
@@ -82,6 +83,15 @@ enum AssetType: String, Codable {
     case video = "VIDEO"
     case image = "IMAGE"
 }
+
+struct ExifInfo: Codable, Hashable {
+    let city: String?
+    let country: String?
+    let dateTimeOriginal: String?
+    let latitude: Double?
+    let longitude: Double?
+}
+
 
 struct User: Codable {
     let name: String
