@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		630F3C062D888B520068BEF1 /* ImmichTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		63380B142D98B06D004C816D /* ImmichShow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ImmichShow.entitlements; sourceTree = "<group>"; };
 		63B1CA3D2D9452C80083C2F4 /* ImmichShow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichShow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -61,6 +62,7 @@
 		630F3BFD2D888B520068BEF1 = {
 			isa = PBXGroup;
 			children = (
+				63380B142D98B06D004C816D /* ImmichShow.entitlements */,
 				630F3C082D888B520068BEF1 /* ImmichTV */,
 				630F3C072D888B520068BEF1 /* Products */,
 			);
@@ -318,7 +320,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -351,7 +353,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -382,8 +384,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -405,7 +408,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -419,8 +422,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -442,7 +446,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;

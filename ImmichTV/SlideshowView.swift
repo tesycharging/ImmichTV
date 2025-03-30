@@ -71,6 +71,18 @@ struct SlideshowView: View {
         }
     }
     
+    func convertToDate(from dateString: String) -> String? {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date =  isoFormatter.date(from: dateString) else { return nil }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long    // e.g., "March 15, 2025"
+        formatter.timeStyle = .medium  // e.g., "4:45:11 PM"
+        formatter.timeZone = TimeZone(identifier: "UTC") // Match the +00:00 offset
+        return formatter.string(from: date)
+    }
+    
     var location: String? {
         var result: String?
         if let city = assetItems[currentIndex].exifInfo?.city {
@@ -91,7 +103,7 @@ struct SlideshowView: View {
                 Text("GPS: \(assetItems[currentIndex].exifInfo!.latitude!): \(assetItems[currentIndex].exifInfo!.longitude!)").font(.caption).foregroundColor(.white.opacity(0.8))
             }
             if assetItems[currentIndex].exifInfo?.dateTimeOriginal != nil {
-                Text("created: \(assetItems[currentIndex].exifInfo!.dateTimeOriginal!)").font(.caption).foregroundColor(.white.opacity(0.8))
+                Text("\(convertToDate(from: assetItems[currentIndex].exifInfo!.dateTimeOriginal!) ?? "")").font(.caption).foregroundColor(.white.opacity(0.8))
             }
         }
     }
@@ -192,7 +204,9 @@ struct SlideshowView: View {
                 .zIndex(1) // Ensure bar is above image
                 .padding(.bottom, 10)
         }.onAppear {
+            #if os(tvOS)
             focusedButton = "playpause"
+            #endif
         }
     }
     
@@ -205,16 +219,15 @@ struct SlideshowView: View {
          ZStack(alignment: .center) {
              Color.black.edgesIgnoringSafeArea(.all) // Full-screen background
              if !assetItems.isEmpty {
-                 Text("No pictures found").font(.title) .foregroundColor(.white)
+                 Text("No pictures found").font(.title)
              }
-             Color.black.edgesIgnoringSafeArea(.all)
              if isLoading {
                  Spacer()
                  ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
                  Spacer()
              } else if assetItems.isEmpty {
                  Spacer()
-                 Text("No pictures found").font(.title) .foregroundColor(.white)
+                 Text("No pictures found").font(.title)
                  Spacer()
              } else {
                  if !isVideoAndPlayable {
@@ -353,7 +366,7 @@ struct SlideshowView: View {
              withAnimation {
                  running = false
                  thumbnail = false
-                 focusedButton = "playpause"
+                 // focusedButton = "playpause"
                  if isBarVisible {
                      showToolbar()
                  }
@@ -365,7 +378,9 @@ struct SlideshowView: View {
                showToolbar()
            }.animation(.easeInOut(duration: 1.0), value: isBarVisible)
          .onReceive(timer) { _ in
-             if running { goToNextItem() }
+             if running && !playerViewModel.isVideoPlaying {
+                 goToNextItem()
+             }
          }
      }
      
@@ -382,7 +397,7 @@ struct SlideshowView: View {
      }
     
     private func goToNextItem() {
-        playerViewModel.player?.pause()
+        playerViewModel.stopPlayer()
         NotificationCenter.default.removeObserver(self)
         if !assetItems.isEmpty {
             currentIndex = (currentIndex + 1) % assetItems.count
@@ -394,7 +409,7 @@ struct SlideshowView: View {
     }
     
     private func goToPreviousItem() {
-        playerViewModel.player?.pause()
+        playerViewModel.stopPlayer()
         NotificationCenter.default.removeObserver(self)
         if !assetItems.isEmpty {
             currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
@@ -416,6 +431,7 @@ struct SlideshowView: View {
                 queue: .main
             ) { _ in
                 self.playerViewModel.player?.seek(to: .zero)
+                self.playerViewModel.isVideoPlaying = false
                 if running {
                     goToNextItem()
                 }
@@ -441,14 +457,16 @@ struct SlideshowView: View {
 
 class PlayerViewModel: ObservableObject {
     @Published var player: AVPlayer?
+    @Published var isVideoPlaying = false
     
     func setupPlayer(with url: URL) {
         player = AVPlayer(url: url)
         // Check player status before playing
-
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1) {
+        self.player?.play()
+        self.isVideoPlaying = true
+        /*DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1) {
             if self.player?.status == .readyToPlay {
-                self.player?.play()
+                print("is playing")
             } else if self.player?.status == .failed {
                 print("Error: \(String(describing: self.player?.error))")
             } else if self.player?.status == .unknown {
@@ -456,7 +474,12 @@ class PlayerViewModel: ObservableObject {
             } else {
                 print("not ready")
             }
-        }
+        }*/
+    }
+    
+    func stopPlayer() {
+        player?.pause()
+        isVideoPlaying = false
     }
 }
 

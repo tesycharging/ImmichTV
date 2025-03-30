@@ -19,16 +19,26 @@ struct SearchView: View {
     @State private var nextPage: Int?
     @State private var previousPage: Int?
     @FocusState private var focusedButton: String? // Track which button is focused
-    private let gridItems = [GridItem(.adaptive(minimum: 400, maximum: 400), spacing: 30)/*, GridItem(.adaptive(minimum: 400, maximum: 400), spacing: 30)*/]
+    let tilewidth: CGFloat
+    private let gridItems: [GridItem]
     @Environment(\.dismiss) private var dismiss
+    
+    init() {
+        #if os(tvOS)
+        tilewidth = 400
+        #else
+        tilewidth = 150
+        #endif
+        gridItems = [GridItem(.adaptive(minimum: tilewidth, maximum: tilewidth), spacing: 30)]
+    }
     
     func AssetCard(assetItem: AssetItem) -> some View {
         ZStack(alignment: .bottom) {
             VStack {
                 AsyncImage(url: immichService.getImageUrl(id: assetItem.id), content: { image in
                     ZStack(alignment: .center) {
-                        image.resizable().frame(width: 400, height: 300).blur(radius: 10)
-                        image.resizable().scaledToFit().frame(width: 396, height: 297)
+                        image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
+                        image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
                     }
                 },
                            placeholder: {
@@ -64,7 +74,9 @@ struct SearchView: View {
                             }).immichTVTestFieldStyle(isFocused: focusedButton == "smartsearch")
                                 .focused($focusedButton, equals: "smartsearch")
                                 .onAppear {
+                                    #if os(tvOS)
                                     focusedButton = "allphotos"
+                                    #endif
                                 }
                             if !immichService.demo {
                                 Button(action: {
@@ -184,14 +196,16 @@ struct SearchView: View {
                                     }
                                 }.padding()
                             }.onAppear {
+                                #if os(tvOS)
                                 self.focusedButton = searchResults.first?.id ?? ""
+                                #endif
                             }.padding().animation(.easeInOut(duration: 0.2), value: focusedButton)
                         }
                         Spacer()
                     }
                 }
             }
-        }
+        }.padding()
         .navigationViewStyle(.stack) // Ensures consistent navigation behavior
         .edgesIgnoringSafeArea(.all)
         .fullScreenCover(isPresented: $showSlideShow) {

@@ -27,13 +27,17 @@ struct SettingView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 TextField("http://immich-server:2283", text: $baseURL).immichTVTestFieldStyle(isFocused: focusedButton == "server")
                     .focused($focusedButton, equals: "server")
-                    .frame(width: UIScreen.main.bounds.width - 20)
                     .onAppear {
+                        #if os(tvOS)
                         focusedButton = "server"
+                        #endif
                         message = ""
                         slideShowOfThumbnails = UserDefaults.standard.bool(forKey: "slideShowOfThumbnails")
                         playVideo = UserDefaults.standard.bool(forKey: "playVideo")
                         timeinterval = UserDefaults.standard.double(forKey: "timeinterval")
+                        if timeinterval < 3 {
+                            timeinterval = 5
+                        }
                         Task {@MainActor in
                             do {
                                 storage = try await immichService.getStorage()
@@ -80,25 +84,20 @@ struct SettingView: View {
                             })
                         }
 #endif
-                }.frame(width: UIScreen.main.bounds.width - 40)
+                }
                 Text(message)
-                    .textFieldStyle(PlainTextFieldStyle())
                     .padding(.horizontal)
-                    .foregroundColor(.white)
                     .cornerRadius(10)
-                    .frame(width: UIScreen.main.bounds.width - 20)
                 Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
                     .immichTVTestFieldStyle(isFocused: focusedButton == "toggle")
                     .focused($focusedButton, equals: "toggle")
-                    .frame(width: UIScreen.main.bounds.width - 20)
                 Toggle("play videos", isOn: $playVideo)
                     .immichTVTestFieldStyle(isFocused: focusedButton == "video")
                     .focused($focusedButton, equals: "video")
-                    .frame(width: UIScreen.main.bounds.width - 20)
                     .disabled(slideShowOfThumbnails)
                     .opacity(!slideShowOfThumbnails ? 1.0: 0.5)
                 HStack {
-                    Text("time interval of slideshow").foregroundColor(.white)
+                    Text("time interval of slideshow")
                     Picker("Select a number", selection: $timeinterval) {
                         ForEach(Array(stride(from: 3.0, through: 10.0, by: 1.0)), id: \.self) { number in
                             Text("\(number, specifier: "%.1f")").tag(number)
@@ -137,7 +136,7 @@ struct SettingView: View {
                 focusedButton = "updateButton"
             }
             #endif
-        }
+        }.padding()
         .navigationTitle("Settings")
         .blur(radius: credentialPopup ? 10 : 0)
     }
@@ -153,7 +152,6 @@ struct CredentialsPopup: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            //Color.black.edgesIgnoringSafeArea(.all) // Full-screen background
             Text("Enter Credentials for")
                 .font(.headline)
             Text(baseURL)
@@ -186,7 +184,6 @@ struct CredentialsPopup: View {
             Spacer()
         }
         .padding()
-        .frame(width: 800)
         .cornerRadius(12)
         .shadow(radius: 10)
     }

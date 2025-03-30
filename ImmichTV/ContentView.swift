@@ -10,12 +10,22 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var immichService = ImmichService()
     @FocusState private var focusedButton: String? // Track which button is focused
-    private let gridItems = [/*GridItem(.fixed(400))*/GridItem(.adaptive(minimum: 400, maximum: 400), spacing: 30)]
+    let tilewidth: CGFloat
+    private let gridItems: [GridItem]
     @State var user = ""
     @State var alblumsExists = true
     @State var errorMessage = ""
     @State private var selectedAlbum: Album?
     @FocusState private var isFocused: Bool
+    
+    init() {
+        #if os(tvOS)
+        tilewidth = 400
+        #else
+        tilewidth = 150
+        #endif
+        gridItems = [GridItem(.adaptive(minimum: tilewidth, maximum: tilewidth), spacing: 30)]
+    }
     
     
     func AlbumOfYear() -> some View {
@@ -57,8 +67,8 @@ struct ContentView: View {
             VStack {
                 AsyncImage(url: immichService.getImageUrl(id: album.albumThumbnailAssetId), content: { image in
                     ZStack(alignment: .center) {
-                        image.resizable().frame(width: 400, height: 300).blur(radius: 10)
-                        image.resizable().scaledToFit().frame(width: 396, height: 297)
+                        image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
+                        image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
                     }
                 },
                            placeholder: {

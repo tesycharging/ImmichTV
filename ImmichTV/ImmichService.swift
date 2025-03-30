@@ -27,6 +27,9 @@ class ImmichService: ObservableObject {
         playVideo = UserDefaults.standard.bool(forKey: "playVideo")
         demo = (baseURL == "http://tesycharging.ch/api" || baseURL == "https://tesycharging.ch/api") && apiKey == "demo"
         timeinterval = UserDefaults.standard.double(forKey: "timeinterval")
+        if timeinterval < 3 {
+            timeinterval = 5
+        }
     }
 
     func fetchAlbums() async throws -> Bool {
