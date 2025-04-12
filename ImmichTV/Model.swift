@@ -57,10 +57,10 @@ struct AssetItem: Identifiable, Hashable, Codable, Equatable {
     let originalMimeType: String
     let isFavorite: Bool
     let exifInfo: ExifInfo?
+    let localDateTime: String
     /*let thumbhash: String
     let fileCreatedAt: Date
     let fileModifiedAt: Date
-    let localDateTime: Date
     let updatedAt: Date
     let isArchived: Bool
     let isTrashed: Bool
@@ -90,6 +90,8 @@ struct ExifInfo: Codable, Hashable {
     let dateTimeOriginal: String?
     let latitude: Double?
     let longitude: Double?
+    let make: String?
+    let model: String?
 }
 
 

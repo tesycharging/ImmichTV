@@ -6,210 +6,262 @@
 //
 
 import SwiftUI
+import UIKit
+
+
 
 struct SearchView: View {
-    @StateObject private var immichService = ImmichService()
+    @EnvironmentObject private var immichService: ImmichService
+    @EnvironmentObject private var entitlementManager: EntitlementManager
     @State private var searchText = ""
-    @State private var searchFavorite: Bool?
-    @State private var searchResults: [AssetItem] = []
-    @State private var showItemFullScreen = false
-    @State private var showSlideShow = false
-    @State private var searchIndex = 0
+    @State private var query: Query = Query()
+    @State private var currentPage: Int = 1
     @State private var matches: Int?
-    @State private var nextPage: Int?
-    @State private var previousPage: Int?
     @FocusState private var focusedButton: String? // Track which button is focused
-    let tilewidth: CGFloat
-    private let gridItems: [GridItem]
-    @Environment(\.dismiss) private var dismiss
+    @State private var smartquery = ""
+    @State private var selectType = "ALL"
+    @State private var isFavorite = false
+    @State private var isNotInAlbum = false
+    @State private var isArchived = false
+    @State private var takenAfter: Date? = nil
+    @State private var takenBefore: Date? = nil
+    @State private var importedAfter: Date? = nil
+    @State private var search = false
+    @State private var detailSearch = false
+    @State private var detailSearchUsed = false
+    @State private var error = false
+    @State private var errorMessage = ""
+    @State private var searchProgress = false
     
-    init() {
-        #if os(tvOS)
-        tilewidth = 400
-        #else
-        tilewidth = 150
-        #endif
-        gridItems = [GridItem(.adaptive(minimum: tilewidth, maximum: tilewidth), spacing: 30)]
-    }
-    
-    func AssetCard(assetItem: AssetItem) -> some View {
-        ZStack(alignment: .bottom) {
-            VStack {
-                AsyncImage(url: immichService.getImageUrl(id: assetItem.id), content: { image in
-                    ZStack(alignment: .center) {
-                        image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
-                        image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
-                    }
-                },
-                           placeholder: {
-                    ProgressView()
-                })
-            }
-        }
-        //.frame(width: 300, height: 200)
-        .cornerRadius(15)
-        .focusable()
-        .focused($focusedButton, equals: assetItem.id)
-        .buttonStyle(PlainButtonStyle())
-    }
 
     var body: some View {
-        NavigationView {
+        VStack(alignment: .leading, spacing: 100) {
+            Spacer()
             ScrollView(.vertical, showsIndicators: false) {
-                HStack(alignment: .top){
-                    VStack(spacing: 40) {
-                        HStack {
-                            TextField("Smart Search", text: $searchText, onCommit: {
-                                Task {
-                                    searchFavorite = nil
-                                    previousPage = nil
-                                    nextPage = 1
-                                    do {
-                                        (searchResults, nextPage) = try await immichService.searchSmartAssets(query: searchText, page: nextPage)
-                                        matches = searchResults.count
-                                    } catch let error {
-                                        print(error.localizedDescription)
-                                    }
-                                }
-                            }).immichTVTestFieldStyle(isFocused: focusedButton == "smartsearch")
-                                .focused($focusedButton, equals: "smartsearch")
-                                .onAppear {
-                                    #if os(tvOS)
-                                    focusedButton = "allphotos"
-                                    #endif
-                                }
-                            if !immichService.demo {
-                                Button(action: {
-                                    Task {
-                                        self.searchText = ""
-                                        nextPage = 1
-                                        previousPage = nil
-                                        searchFavorite = true
-                                        do {
-                                            (searchResults, nextPage) = try await immichService.searchAssets(isFavorite: searchFavorite, page: nextPage)
-                                            matches = searchResults.count
-                                        } catch let error {
-                                            print(error.localizedDescription)
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "heart.fill")
-                                        .buttonStyle(PlainButtonStyle())
-                                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "favorite"))
-                                    .focused($focusedButton, equals: "favorite")
-                                Button(action: {
-                                    Task {
-                                        self.searchText = ""
-                                        nextPage = 1
-                                        previousPage = nil
-                                        searchFavorite = nil
-                                        do {
-                                            (searchResults, nextPage) = try await immichService.searchAssets(page: nextPage)
-                                            matches = searchResults.count
-                                        } catch let error {
-                                            print(error.localizedDescription)
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "swatchpalette")
-                                        .buttonStyle(PlainButtonStyle())
-                                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "allphotos"))
-                                    .focused($focusedButton, equals: "allphotos")
+                Text("Search Library").font(.title).padding()
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 10) {
+                        TextField("Smart Search", text: $smartquery)
+                            .immichTVTestFieldStyle(isFocused: focusedButton == "smartsearch")
+                            .focused($focusedButton, equals: "smartsearch")
+                            #if os(tvOS)
+                            .onAppear {
+                                focusedButton = "smartsearch"
                             }
+                            #endif
+                        if !entitlementManager.demo {
                             Button(action: {
-                                showSlideShow = true
-                            }) { // Action is empty since NavigationLink handles the tap
-                                Text("Play Slideshow")
-                                    .font(.caption)
-                            }.disabled(searchResults.isEmpty)
-                                .buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
-                                .focused($focusedButton, equals: "slideshow")
-                        }.navigationTitle("Search Library")
-                        if self.matches != nil {
-                            HStack {
-                                Text("\(matches ?? 0) matches found").font(.caption)
-                                Spacer()
-                                if (previousPage != nil || nextPage != nil) {
-                                    Button(action: {
-                                        Task {
-                                            do {
-                                                if self.searchText == "" {
-                                                    (searchResults, nextPage) = try await immichService.searchAssets(isFavorite: searchFavorite, page: previousPage)
-                                                } else {
-                                                    (searchResults, nextPage) = try await immichService.searchSmartAssets(query: self.searchText, page: previousPage)
-                                                }
-                                                matches = searchResults.count
-                                                if nextPage == nil {} else if nextPage! == 2 {
-                                                    previousPage = nil
-                                                } else {
-                                                    previousPage = nextPage! - 2
-                                                }
-                                            } catch let error {
-                                                print(error.localizedDescription)
-                                            }
+                                detailSearch = true
+                            }) {
+                                Image(systemName: detailSearchUsed ? "text.bubble.fill" : "text.bubble").frame(height: 32)//.buttonStyle(PlainButtonStyle())
+                            }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "searchmask"))
+                                .focused($focusedButton, equals: "searchmask")
+#if os(tvOS)
+                                .sheet(isPresented: $detailSearch) {
+                                    SearchDetailView(smartquery: $smartquery, selectType: $selectType, isFavorite: $isFavorite, isNotInAlbum: $isNotInAlbum, isArchived: $isArchived, takenAfter: $takenAfter, takenBefore: $takenBefore, importedAfter: $importedAfter, search: $search, onDismiss: {
+                                        self.detailSearchUsed = smartquery != "" || selectType != "ALL" || isFavorite || isNotInAlbum || isArchived || takenAfter != nil || takenBefore != nil || importedAfter != nil
+                                    })
+                                }
+#else
+                                .popover(isPresented: $detailSearch) {
+                                    SearchDetailView(smartquery: $smartquery, selectType: $selectType, isFavorite: $isFavorite, isNotInAlbum: $isNotInAlbum, isArchived: $isArchived, takenAfter: $takenAfter, takenBefore: $takenBefore, importedAfter: $importedAfter, search: $search, onDismiss: {
+                                        self.detailSearchUsed = smartquery != "" || selectType != "ALL" || isFavorite || isNotInAlbum || isArchived || takenAfter != nil || takenBefore != nil || importedAfter != nil
+                                    })
+                                } 
+#endif
+                        }
+                        Button(action: {
+                            search = true
+                        }) {
+                            Image(systemName: "magnifyingglass").frame(height: 32)//.buttonStyle(PlainButtonStyle())
+                        }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "search"))
+                            .focused($focusedButton, equals: "search")
+                            .onChange(of: search) {
+                                if search {
+                                    searchProgress = true
+                                    search = false
+                                    query = Query(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter)
+                                    Task { @MainActor in
+                                        do {
+                                            query.page = try await immichService.searchAssets(query: query)
+                                            matches = immichService.assetItems.count
+                                            currentPage = (query.page ?? 2) - 1
+                                            error = false
+                                        } catch let error {
+                                            self.error = true
+                                            errorMessage = error.localizedDescription
                                         }
-                                    }) {
-                                        Image(systemName: "backward.frame")
-                                    }.disabled(previousPage == nil).buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "back"))
-                                        .focused($focusedButton, equals: "back")
-                                    Text("page \((nextPage ?? 2) - 1)").font(.caption)
-                                    Button(action: {
-                                        Task {
-                                            do {
-                                                if self.searchText == "" {
-                                                    (searchResults, nextPage) = try await immichService.searchAssets(isFavorite: searchFavorite, page: nextPage)
-                                                } else {
-                                                    (searchResults, nextPage) = try await immichService.searchSmartAssets(query: self.searchText, page: nextPage)
-                                                }
-                                                matches = searchResults.count
-                                                if nextPage == nil {} else if nextPage! == 2 {
-                                                    previousPage = nil
-                                                } else {
-                                                    previousPage = nextPage! - 2
-                                                }
-                                            } catch let error {
-                                                print(error.localizedDescription)
-                                            }
-                                        }
-                                    }) {
-                                        Image(systemName: "forward.frame")
-                                    }.disabled(nextPage == nil).buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "forward"))
-                                        .focused($focusedButton, equals: "forward")
+                                        searchProgress = false
+                                    }
                                 }
                             }
-                        }
-                        if !searchResults.isEmpty {
-                            VStack(alignment: .leading, spacing: 0) {
-                                LazyVGrid(columns: gridItems, spacing: 0) {
-                                    ForEach(searchResults.indices, id: \.self) { index in
-                                        Button(action: {
-                                            showItemFullScreen = true
-                                            searchIndex = index
-                                        }) {
-                                            AssetCard(assetItem: searchResults[index])
-                                        }
-                                        .buttonStyle(ImmichTVTaleStyle(isFocused: focusedButton == "\(index)"))
-                                            .focused($focusedButton, equals: "\(index)")
-                                        .fullScreenCover(isPresented: $showItemFullScreen) {
-                                            SlideshowView(searchResults: searchResults, id: searchResults[searchIndex].id, start: false)
-                                        }
-                                    }
-                                }.padding()
-                            }.onAppear {
-                                #if os(tvOS)
-                                self.focusedButton = searchResults.first?.id ?? ""
-                                #endif
-                            }.padding().animation(.easeInOut(duration: 0.2), value: focusedButton)
-                        }
                         Spacer()
+                        NavigationLink(value: NavigationDestination.slide(nil, nil, query)) {
+                            Image(systemName: "play").frame(height: 32)//.buttonStyle(PlainButtonStyle())
+                        }.disabled(immichService.assetItems.isEmpty)
+                            .buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
+                            .focused($focusedButton, equals: "slideshow")
+                    }.padding() //smartsearch
+                    if error {
+                        Text("\(errorMessage)").font(.caption).padding()
+                        Spacer()
+                    } else if self.matches != nil {
+                        HStack(spacing: 10) {
+                            if !searchProgress {
+                                VStack(alignment: .leading) {
+                                    Text("\(matches ?? 0) matches found").font(.caption)
+                                    if !query.body.isEmpty {
+                                        Text("\(query.body)").multilineTextAlignment(.leading).font(.system(size: 12, weight: .medium, design: .rounded))
+                                    }
+                                }
+                            }
+                            Spacer()
+                            if query.isPaged {
+                                Button(action: {
+                                    Task {
+                                        searchProgress = true
+                                        do {
+                                            query.page = try await immichService.searchAssets(query: self.query.toPrevious())
+                                            matches = immichService.assetItems.count
+                                            currentPage = (query.page ?? 2) - 1
+                                            error = false
+                                        } catch let error {
+                                            self.error = true
+                                            errorMessage = error.localizedDescription
+                                        }
+                                        searchProgress = false
+                                    }
+                                }) {
+                                    Image(systemName: "backward.frame")
+                                }.disabled(query.noPreviousPage).buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "back"))
+                                    .focused($focusedButton, equals: "back")
+                                Text("page \(currentPage)").font(.caption)
+                                Button(action: {
+                                    Task {
+                                        searchProgress = true
+                                        do {
+                                            query.page = try await immichService.searchAssets(query: self.query.toNext())
+                                            matches = immichService.assetItems.count
+                                            currentPage = (query.page ?? 2) - 1
+                                            error = false
+                                        } catch let error {
+                                            self.error = true
+                                            errorMessage = error.localizedDescription
+                                        }
+                                        searchProgress = false
+                                    }
+                                }) {
+                                    Image(systemName: "forward.frame")
+                                }.disabled(query.noNextPage).buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "forward"))
+                                    .focused($focusedButton, equals: "forward")
+                            }
+                        }.padding()
                     }
+                    if searchProgress {
+                        HStack(alignment: .center, spacing: 10) {
+                            Spacer()
+                            ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                            Spacer()
+                        }
+                    } else if !immichService.assetItems.isEmpty {
+                        AssetsView(query: query)
+                    }
+                    Spacer()
                 }
             }
-        }.padding()
-        .navigationViewStyle(.stack) // Ensures consistent navigation behavior
-        .edgesIgnoringSafeArea(.all)
-        .fullScreenCover(isPresented: $showSlideShow) {
-            SlideshowView(searchResults: searchResults)
+        }.ignoresSafeArea()
+    }
+}
+
+class Query: Hashable {
+    let id = UUID()
+    var body: [String: Any] = ["page": 1]
+    var isSmartSearch = false
+    var page: Int? {
+        willSet {
+            if newValue == nil {} else if newValue == 2 {
+                previousPage = nil
+            } else {
+                previousPage = newValue! - 2
+            }
+            nextPage = newValue
+        }
+    }
+    var isPaged: Bool {
+        (previousPage != nil || nextPage != nil)
+    }
+    var noPreviousPage: Bool {
+        previousPage == nil
+    }
+    var noNextPage: Bool {
+        nextPage == nil
+    }
+    private var previousPage: Int? = nil
+    private var nextPage: Int? = nil
+    
+    init(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil) {
+        addQuery(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter)
+    }
+    
+    func addQuery(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil) {
+        if smartquery != "" {
+            body["query"] = smartquery
+            isSmartSearch = true
+        } else {
+            isSmartSearch = false
+        }
+        if selectType != "ALL" {
+            body["type"] = selectType
+        }
+        if isFavorite {
+            body["isFavorite"] = isFavorite
+        }
+        if isNotInAlbum {
+            body["isNotInAlbum"] = isNotInAlbum
+        }
+        if isArchived {
+            body["isArchived"] = isArchived
+        }
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let ta = takenAfter {
+            body["takenAfter"] = isoFormatter.string(from: ta)
+        }
+        if let tb = takenBefore {
+            body["takenBefore"] = isoFormatter.string(from: tb)
+        }
+        if let ia = importedAfter {
+            body["createdAfter"] = isoFormatter.string(from: ia)
+            body["order"] = "asc"
+        }
+        body["page"] = 1
+    }
+    
+    func toPrevious() -> Query {
+        body["page"] = previousPage
+        return self
+    }
+    
+    func toNext() -> Query {
+        body["page"] = nextPage
+        return self
+    }
+    
+    static func == (lhs: Query, rhs: Query) -> Bool {
+        return lhs.id == rhs.id && NSDictionary(dictionary: lhs.body).isEqual(to: rhs.body)
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        // Hash the query dictionary by converting to a hashable form
+        for (key, value) in body.sorted(by: { $0.key < $1.key }) {
+            hasher.combine(key)
+            // Handle common types; extend as needed
+            if let stringValue = value as? String {
+                hasher.combine(stringValue)
+            } else if let intValue = value as? Int {
+                hasher.combine(intValue)
+            } // Add more type cases as needed
         }
     }
 }

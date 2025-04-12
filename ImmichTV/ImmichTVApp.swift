@@ -9,9 +9,21 @@ import SwiftUI
 
 @main
 struct ImmichTVApp: App {
+    @StateObject private var immichService: ImmichService
+    @StateObject private var entitlementManager: EntitlementManager
+    
+    init() {
+        let entitlementManager = EntitlementManager()
+        let immichService = ImmichService(entitlementManager: entitlementManager)
+        self._entitlementManager = StateObject(wrappedValue: entitlementManager)
+        self._immichService = StateObject(wrappedValue: immichService)
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(entitlementManager)
+                .environmentObject(immichService)
         }
     }
 }

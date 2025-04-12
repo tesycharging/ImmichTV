@@ -8,19 +8,25 @@
 import SwiftUI
 import Combine
 import AVKit
+import AVFoundation
 
 struct SlideshowView: View {
-    let album: Album?
-    let search: Bool
+    @EnvironmentObject private var immichService: ImmichService
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    let albumName: String?
     @State private var running = true {
         didSet {
             UIApplication.shared.isIdleTimerDisabled = running
+            if running {
+                playerMusic?.play()
+            } else {
+                playerMusic?.pause()
+            }
         }
     }
-    @State private var assetItems: [AssetItem] = []
-    @StateObject private var immichService = ImmichService()
+    @State private var query: Query?
     @State private var currentIndex = 0
-    @State private var isLoading = true
+    @State private var isLoading = false
     @State private var showAlbumName = true
     @State private var thumbnail = true
     @State private var isBarVisible: Bool = true // Controls bar visibility
@@ -30,38 +36,28 @@ struct SlideshowView: View {
     @State private var isFavorite = false
     @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
     @State private var swipeOffset: CGFloat = 0 // Tracks the swipe position
-        
-        
+    @State private var exifInfo: ExifInfo? = nil
     
-    init(album: Album) {
-        self.album = album
-        self.search = false
-        self.assetItems = []
-        self.running = true
-    }
+    @State private var playerMusic: AVPlayer?
+      
     
-    init(searchResults: [AssetItem], id: String? = nil, start: Bool = true) {
-        self.album = nil
-        self.search = true
-        self._assetItems = State(initialValue: searchResults)
-        if id != nil {
-            if let index = searchResults.firstIndex(where: { $0.id == id }) {
-                self._currentIndex = State(initialValue: index)
-            }
-        }
-        self._running = State(initialValue: start)
+    init(albumName: String? = nil, index: Int? = nil, query: Query? = nil) {
+        self.albumName = albumName
+        self._query = State(initialValue: query)
+        self._currentIndex = State(initialValue: index ?? 0)
+        self._running = State(initialValue: index == nil)
     }
     
     private var timer: Publishers.Autoconnect<Timer.TimerPublisher> {
-        Timer.publish(every: immichService.timeinterval, on: .main, in: .common).autoconnect()
+        return Timer.publish(every: entitlementManager.timeinterval, on: .main, in: .common).autoconnect()
     }
     
     var albumTitle: some View {
         VStack(alignment: .center) {
-            if let a = album, showAlbumName {
+            if let aName = albumName, showAlbumName {
                 Spacer()
                 HStack(alignment: .center) {
-                    Text(a.albumName).font(.title3).foregroundColor(.white.opacity(0.8))
+                    Text(aName).font(.title3).foregroundColor(.white.opacity(0.8))
                 }.padding().background(.black.opacity(0.5))
                     .cornerRadius(15)
                     .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
@@ -83,28 +79,83 @@ struct SlideshowView: View {
         return formatter.string(from: date)
     }
     
-    var location: String? {
+    func location(exifInfo: ExifInfo) -> String? {
         var result: String?
-        if let city = assetItems[currentIndex].exifInfo?.city {
+        if let city = exifInfo.city {
             result = city
         }
-        if let country = assetItems[currentIndex].exifInfo?.country {
+        if let country = exifInfo.country {
             result = result == nil ? country : "\(result!), \(country)"
         }
         return result
     }
     
-    var exifInfo: some View {
+    func camera(exifInfo: ExifInfo) -> String? {
+        var result: String?
+        if let make = exifInfo.make {
+            result = make
+        }
+        if let model = exifInfo.model {
+            result = result == nil ? model : "\(result!), \(model)"
+        }
+        return result
+    }
+    
+    func exifInfoView(exifInfo: ExifInfo) -> some View {
         VStack(alignment: .trailing) {
-            if let result = location {
+            Text("\(immichService.assetItems[currentIndex].originalFileName) #\(self.currentIndex + 1) of Page \((query?.page ?? 2) - 1)").font(.caption).foregroundColor(.white.opacity(0.8))
+            if let result = location(exifInfo: exifInfo) {
                 Text("\(result)").font(.caption).foregroundColor(.white.opacity(0.8))
             }
-            if assetItems[currentIndex].exifInfo?.latitude != nil && assetItems[currentIndex].exifInfo?.longitude != nil {
-                Text("GPS: \(assetItems[currentIndex].exifInfo!.latitude!): \(assetItems[currentIndex].exifInfo!.longitude!)").font(.caption).foregroundColor(.white.opacity(0.8))
+            if exifInfo.latitude != nil && exifInfo.longitude != nil {
+                Text("GPS: \(exifInfo.latitude!): \(exifInfo.longitude!)").font(.caption).foregroundColor(.white.opacity(0.8))
             }
-            if assetItems[currentIndex].exifInfo?.dateTimeOriginal != nil {
-                Text("\(convertToDate(from: assetItems[currentIndex].exifInfo!.dateTimeOriginal!) ?? "")").font(.caption).foregroundColor(.white.opacity(0.8))
+            if exifInfo.dateTimeOriginal != nil {
+                Text("\(convertToDate(from: exifInfo.dateTimeOriginal!) ?? "")").font(.caption).foregroundColor(.white.opacity(0.8))
             }
+            if let cam = camera(exifInfo: exifInfo) {
+                Text("\(cam)").font(.caption).foregroundColor(.white.opacity(0.8))
+            }
+        }
+    }
+    
+    private var showVideoButton: Bool {
+        if (immichService.assetItems[currentIndex].type == .video && thumbnail && (entitlementManager.slideShowOfThumbnails || (!entitlementManager.slideShowOfThumbnails && !entitlementManager.playVideo))) {
+            focusedButton = "videoButton"
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    //if video is not played automatic, this button let it play and/or stops the slideshow.
+    //This button is showed when the type is "video"
+    var videoButton: some View {
+        VStack(alignment: .center, spacing: 40) {
+            HStack(alignment: .top) {
+                Spacer()
+                HStack {
+                    VStack(alignment: .trailing) {
+                        if (showVideoButton) {
+                            Button(action: {
+                                timerSubscription?.cancel()
+                                timerSubscription = nil
+                                running = false
+                                thumbnail = false
+                            }) {
+                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo").padding(.horizontal, 30)
+                            }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "videoButton"))
+                                .focused($focusedButton, equals: "videoButton")
+                        }
+                    }
+                }.padding()
+                    .background(Color.black.opacity(0.5)) // Transparent background
+                    .cornerRadius(15)
+                    .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
+                    .zIndex(1) // Ensure bar is above image
+                    .padding(.top, 20)
+            }
+            Spacer()
         }
     }
     
@@ -131,16 +182,16 @@ struct SlideshowView: View {
                 Spacer()
                 HStack {
                     VStack(alignment: .trailing) {
-                        if !immichService.demo {
+                        if !entitlementManager.demo {
                             Button(action: {
                                 showToolbar()
                                 Task {@MainActor in
                                     do {
-                                        let updatedAssetItem = try await immichService.updateAssets(id: assetItems[currentIndex].id, favorite: !assetItems[currentIndex].isFavorite)
-                                        guard !assetItems.isEmpty, currentIndex < assetItems.count else { return }
+                                        let updatedAssetItem = try await immichService.updateAssets(id: immichService.assetItems[currentIndex].id, favorite: !immichService.assetItems[currentIndex].isFavorite)
+                                        guard !immichService.assetItems.isEmpty, currentIndex < immichService.assetItems.count else { return }
                                         isFavorite = updatedAssetItem.isFavorite
-                                        assetItems.remove(at: currentIndex)
-                                        assetItems.insert(updatedAssetItem, at: currentIndex)
+                                        immichService.assetItems.remove(at: currentIndex)
+                                        immichService.assetItems.insert(updatedAssetItem, at: currentIndex)
                                     } catch {
                                         print(error.localizedDescription)
                                     }
@@ -150,18 +201,18 @@ struct SlideshowView: View {
                             }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "favorite"))
                                 .focused($focusedButton, equals: "favorite")
                         }
-                        if immichService.slideShowOfThumbnails || (assetItems[currentIndex].type == .video && !immichService.playVideo && !immichService.slideShowOfThumbnails) {
+                        if entitlementManager.slideShowOfThumbnails || (immichService.assetItems[currentIndex].type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails) {
                             Button(action: {
                                 showToolbar()
                                 running = false
                                 thumbnail = false
                             }) {
-                                Image(systemName: assetItems[currentIndex].type == .video ? "video" : "photo").padding(.horizontal, 30)
+                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo").padding(.horizontal, 30)
                             }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "original"))
                                 .focused($focusedButton, equals: "original")
                         }
-                        if assetItems[currentIndex].exifInfo != nil {
-                            exifInfo
+                        if exifInfo != nil {
+                            exifInfoView(exifInfo: exifInfo!)
                         }
                     }
                 }.padding()
@@ -207,73 +258,95 @@ struct SlideshowView: View {
             #if os(tvOS)
             focusedButton = "playpause"
             #endif
+            if immichService.assetItems[currentIndex].exifInfo == nil {
+                Task {
+                    if let exif = try? await immichService.getAsset(id: immichService.assetItems[currentIndex].id).exifInfo {
+                        exifInfo = exif
+                    }
+                }
+            } else {
+                exifInfo = immichService.assetItems[currentIndex].exifInfo!
+            }
         }
     }
     
     var isVideoAndPlayable: Bool {
-        return ((assetItems[currentIndex].type == .video && !thumbnail) ||
-               (assetItems[currentIndex].type == .video && !immichService.slideShowOfThumbnails && immichService.playVideo))
+        return ((immichService.assetItems[currentIndex].type == .video && !thumbnail) ||
+                (immichService.assetItems[currentIndex].type == .video && !entitlementManager.slideShowOfThumbnails && entitlementManager.playVideo))
     }
      
      var body: some View {
          ZStack(alignment: .center) {
-             Color.black.edgesIgnoringSafeArea(.all) // Full-screen background
-             if !assetItems.isEmpty {
-                 Text("No pictures found").font(.title)
-             }
+             Color.black.ignoresSafeArea() // Full-screen background
              if isLoading {
                  Spacer()
                  ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
                  Spacer()
-             } else if assetItems.isEmpty {
+             } else if immichService.assetItems.isEmpty {
                  Spacer()
                  Text("No pictures found").font(.title)
                  Spacer()
              } else {
                  if !isVideoAndPlayable {
-                     AsyncImage(url: immichService.getImageUrl(id: assetItems[currentIndex].id, thumbnail: immichService.slideShowOfThumbnails && thumbnail, video: assetItems[currentIndex].type == .video), content: { image in
-                         image.resizable().scaledToFit().edgesIgnoringSafeArea(.all).cornerRadius(15)
-                             .background(.black)
-                             .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
-                             .focused($focusedButton, equals: "image")
-                     }, placeholder: {
-                         ProgressView()
-                     }).frame(maxWidth: .infinity, maxHeight: .infinity)
+                     AsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video)) { phase in
+                         switch phase {
+                         case .empty:
+                             ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                         case .success(let image):
+                             image.resizable().scaledToFit().ignoresSafeArea().cornerRadius(15)
+                                 .background(.black)
+                                 .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
+                                 .focused($focusedButton, equals: "image")
+                         case .failure:
+                             AsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video)) { phase in
+                                 switch phase {
+                                 case .empty:
+                                     ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                                 case .success(let image):
+                                     image.resizable().scaledToFit().ignoresSafeArea().cornerRadius(15)
+                                         .background(.black)
+                                         .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
+                                         .focused($focusedButton, equals: "image")
+                                 case .failure:
+                                     Color.gray.overlay(Text("Failed \(immichService.assetItems[currentIndex].originalFileName)"))
+                                 @unknown default:
+                                     Color.gray
+                                 }
+                             }
+                         @unknown default:
+                             Color.gray
+                         }
+                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                          .overlay() {
                              albumTitle
                          }
                          .onAppear {
-                             isFavorite = assetItems[currentIndex].isFavorite
+                             isFavorite = immichService.assetItems[currentIndex].isFavorite
                          }
                  } else {
                      VideoPlayer(player: playerViewModel.player).frame(maxWidth: .infinity, maxHeight: .infinity)
                          .aspectRatio(contentMode: .fit) // Maintain video's aspect ratio, fitting within bounds
-                         .edgesIgnoringSafeArea(.all) // Extend to edges for iPad
+                         .ignoresSafeArea() // Extend to edges for iPad
                          .overlay() {
                              albumTitle
                          }
                          .onAppear {
-                             isFavorite = assetItems[currentIndex].isFavorite
+                             isFavorite = immichService.assetItems[currentIndex].isFavorite
                              setupPlayer()
                          }
                  }
                  // Transparent bar
                  if isBarVisible {
                      toolBar
+                 } else {
+                     videoButton
                  }
              }
          }
          .clipped()
          .ignoresSafeArea()
-         .edgesIgnoringSafeArea(.all)
-         .navigationBarBackButtonHidden(!self.isBarVisible) // Hides the back button
-         .task {
-             if !search {
-                 await loadAssets()
-             } else {
-                 self.isLoading = false
-             }
-         }
+         .ignoresSafeArea()
+         .navigationBarBackButtonHidden(true)// Hides the back button
         #if os(tvOS)
          .onMoveCommand { direction in // Handle arrow key/remote input
              switch direction {
@@ -295,9 +368,7 @@ struct SlideshowView: View {
                      if focusedButton == nil {
                          focusedButton = "next"
                      }
-                     if isBarVisible {
-                         showToolbar()
-                     }
+                     showToolbar()
                  }
              case .up:
                  if isBarVisible {
@@ -308,11 +379,24 @@ struct SlideshowView: View {
                  showToolbar()
              case .down:
                  withAnimation(.easeInOut(duration: 0.3)) {
-                     if isBarVisible && (focusedButton != "privious" || focusedButton != "next" || focusedButton != "playpause") {
+                     if isBarVisible {
+                         if ((focusedButton == "privious" || focusedButton == "next" || focusedButton == "playpause")) {
+                             isBarVisible = false
+                         } else if focusedButton == "favorite" {
+                             if entitlementManager.slideShowOfThumbnails || (immichService.assetItems[currentIndex].type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails) {
+                                 focusedButton = "original"
+                             } else {
+                                 focusedButton = "playpause"
+                             }
+                             showToolbar()
+                         } else {
+                             focusedButton = "playpause"
+                             showToolbar()
+                         }
+                     } else {
+                         isBarVisible = true
                          focusedButton = "playpause"
                          showToolbar()
-                     } else {
-                         isBarVisible = false
                      }
                  }
              default:
@@ -375,35 +459,81 @@ struct SlideshowView: View {
          #endif
          .background(Color.black)
          .onAppear {
-               showToolbar()
-           }.animation(.easeInOut(duration: 1.0), value: isBarVisible)
+             showToolbar()
+             setupPlayerMusic()
+           }.onDisappear {
+               playerMusic?.pause() // Optional: pause when view disappears
+           }
+         .animation(.easeInOut(duration: 1.0), value: isBarVisible)
          .onReceive(timer) { _ in
              if running && !playerViewModel.isVideoPlaying {
                  goToNextItem()
              }
          }
      }
-     
-     private func loadAssets() async {
-         do {
-             isLoading = true
-             let fetchedAssetItems = try await immichService.fetchAssets(for: album?.id ?? "")
-             assetItems = fetchedAssetItems
-             isLoading = false
-         } catch {
-             print("Failed to fetch pictures: \(error)")
-             isLoading = false
-         }
-     }
+    
+    private func setupPlayerMusic() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
+        guard let url = entitlementManager.musicURL else { return }
+        // Security-scoped resource access
+        let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if shouldStopAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        let playerItem = AVPlayerItem(url: url)
+        playerMusic = AVPlayer(playerItem: playerItem)
+        // Configure audio session
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
+        // Add notification observer for when audio ends
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerMusic?.currentItem,
+            queue: .main
+        ) { [weak playerMusic] _ in
+            playerMusic?.seek(to: .zero)
+            if running {
+                playerMusic?.play()
+            }
+        }
+        if running && !(playerMusic?.isPlaying ?? true) {
+            playerMusic?.play() // Auto-play on appear
+        }
+    }
     
     private func goToNextItem() {
         playerViewModel.stopPlayer()
         NotificationCenter.default.removeObserver(self)
-        if !assetItems.isEmpty {
-            currentIndex = (currentIndex + 1) % assetItems.count
-            isFavorite = assetItems[currentIndex].isFavorite
-            thumbnail = true
-            setupPlayer()
+        if !immichService.assetItems.isEmpty {
+            currentIndex = (currentIndex + 1) % immichService.assetItems.count
+            Task {
+                if currentIndex == 0 && !(query?.noNextPage ?? true)  {
+                    do {
+                        query!.page = try await immichService.searchAssets(query: query!.toNext())
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+                if immichService.assetItems[currentIndex].exifInfo == nil {
+                    exifInfo = try? await immichService.getAsset(id: immichService.assetItems[currentIndex].id).exifInfo
+                } else {
+                    exifInfo = immichService.assetItems[currentIndex].exifInfo
+                }
+                isFavorite = immichService.assetItems[currentIndex].isFavorite
+                thumbnail = true
+                setupPlayer()
+            }
         }
         UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
     }
@@ -411,18 +541,33 @@ struct SlideshowView: View {
     private func goToPreviousItem() {
         playerViewModel.stopPlayer()
         NotificationCenter.default.removeObserver(self)
-        if !assetItems.isEmpty {
-            currentIndex = (currentIndex - 1 + assetItems.count) % assetItems.count
-            isFavorite = assetItems[currentIndex].isFavorite
-            thumbnail = true
-            setupPlayer()
+        if !immichService.assetItems.isEmpty {
+            Task {
+                currentIndex = (currentIndex - 1 + immichService.assetItems.count) % immichService.assetItems.count
+                if currentIndex == (immichService.assetItems.count - 1) && !(query?.noNextPage ?? true) {
+                    do {
+                        query!.page = try await immichService.searchAssets(query: query!.toPrevious())
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+                if immichService.assetItems[currentIndex].exifInfo == nil {
+                    exifInfo = try? await immichService.getAsset(id: immichService.assetItems[currentIndex].id).exifInfo
+                } else {
+                    exifInfo = immichService.assetItems[currentIndex].exifInfo
+                }
+                isFavorite = immichService.assetItems[currentIndex].isFavorite
+                thumbnail = true
+                setupPlayer()
+            }
         }
         UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private func setupPlayer() {
         if !isVideoAndPlayable { return } else {
-            playerViewModel.setupPlayer(with: immichService.getVideoUrl(id: assetItems[currentIndex].id)!)
+            playerMusic?.pause()
+            playerViewModel.setupPlayer(with: immichService.getVideoUrl(id: immichService.assetItems[currentIndex].id)!)
             
             // Add observer for when video ends
             NotificationCenter.default.addObserver(
@@ -433,6 +578,7 @@ struct SlideshowView: View {
                 self.playerViewModel.player?.seek(to: .zero)
                 self.playerViewModel.isVideoPlaying = false
                 if running {
+                    playerMusic?.play()
                     goToNextItem()
                 }
             }
@@ -464,17 +610,6 @@ class PlayerViewModel: ObservableObject {
         // Check player status before playing
         self.player?.play()
         self.isVideoPlaying = true
-        /*DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1) {
-            if self.player?.status == .readyToPlay {
-                print("is playing")
-            } else if self.player?.status == .failed {
-                print("Error: \(String(describing: self.player?.error))")
-            } else if self.player?.status == .unknown {
-                print("Unreliable for AVPlayer due to incomplete AVFoundation support.")
-            } else {
-                print("not ready")
-            }
-        }*/
     }
     
     func stopPlayer() {
@@ -483,4 +618,9 @@ class PlayerViewModel: ObservableObject {
     }
 }
 
+extension AVPlayer {
+    var isPlaying: Bool {
+        return rate != 0 && error == nil
+    }
+}
 

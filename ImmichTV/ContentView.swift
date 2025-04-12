@@ -7,132 +7,135 @@
 
 import SwiftUI
 
+// Define navigation destinations
+enum NavigationDestination: Hashable {
+    case settings
+    case search
+    case album(albumId: String, albumName: String)
+    case slide(String? = nil, Int? = nil, Query? = nil)
+}
+
 struct ContentView: View {
-    @StateObject private var immichService = ImmichService()
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var immichService: ImmichService
     @FocusState private var focusedButton: String? // Track which button is focused
-    let tilewidth: CGFloat
-    private let gridItems: [GridItem]
     @State var user = ""
-    @State var alblumsExists = true
+    @State var error = false
     @State var errorMessage = ""
-    @State private var selectedAlbum: Album?
-    @FocusState private var isFocused: Bool
-    
-    init() {
-        #if os(tvOS)
-        tilewidth = 400
-        #else
-        tilewidth = 150
-        #endif
-        gridItems = [GridItem(.adaptive(minimum: tilewidth, maximum: tilewidth), spacing: 30)]
-    }
-    
-    
-    func AlbumOfYear() -> some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            ForEach(immichService.albumsByYear.keys.sorted().reversed(), id: \.self) { year in
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(year).font(.title).padding(.horizontal, 20)
-                    LazyVGrid(columns: gridItems, spacing: 0) {
-                        ForEach(immichService.albumsByYear[year] ?? [], id: \.id) { album in
-                            Button(action: {
-                                selectedAlbum = album
-                            }) {
-                                AlbumCard(album: album)
-                            }.buttonStyle(ImmichTVTaleStyle(isFocused: focusedButton == album.id))
-                                .focused($focusedButton, equals: album.id)
-                        }
-                    }.padding()
-                }
-            }
-        }.navigationTitle("Immich Albums \(user == "" ? "" : "of \(user)")")
-            .fullScreenCover(isPresented: Binding(
-                get: { selectedAlbum != nil },
-                set: {if !$0 { selectedAlbum = nil }}
-            )) {
-                if let album = selectedAlbum {
-                    SlideshowView(album: album)
-                } else {
-                    #if os(tvOS)
-                    Text("Error: No album selected")
-                    #else
-                    ErrorView()
-                    #endif
-                }
-            }
-    }
-    
-    func AlbumCard(album: Album) -> some View {
-        ZStack(alignment: .bottom) {
-            VStack {
-                AsyncImage(url: immichService.getImageUrl(id: album.albumThumbnailAssetId), content: { image in
-                    ZStack(alignment: .center) {
-                        image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
-                        image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
-                    }
-                },
-                           placeholder: {
-                    ProgressView()
-                })
-            }
-            Text(album.albumName).font(.headline).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
-        }
-        .cornerRadius(15)
-    }
+    @State var isLoading = true
+    @State private var navigationPath = NavigationPath() // Manages navigation stack
+    @State private var cameFromSetting: Bool = true
+    @State private var isloading = true
+    @State private var slideActive = false
+ 
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             Group {
-                if immichService.albumsByYear.isEmpty {
-                    if alblumsExists {
-                        ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                    } else {
-                        Text(errorMessage).font(.caption)
-                    }
+                if isLoading {
+                    ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                } else if error {
+                    Text(errorMessage).font(.caption)
+                        .onTapGesture {
+                            navigationPath.append(NavigationDestination.settings)
+                        }
+                } else if immichService.albumsGrouped.isEmpty {
+                    Text("no albums").font(.caption)
                 } else {
-                    self.AlbumOfYear()
-                }
-            }.onAppear {
-                Task {
-                    immichService.loadSettings()
-                    do {
-                        user = try await immichService.getMyUser()
-                        alblumsExists = try await immichService.fetchAlbums()
-                    } catch {
-                        errorMessage = (error as NSError).domain
-                        alblumsExists = false
-                        print("Error fetching albums: \(error)")
-                    }
+                    ScrollView(.vertical, showsIndicators: false) {
+                        AssetsView(showAlbums: true)
+                    }.navigationTitle("Immich Albums \(user == "" ? "" : "of \(user)")")
                 }
             }.toolbar {
                 ToolbarItem(placement: .navigation) {
-                    NavigationLink(destination: SearchView().edgesIgnoringSafeArea(.all)) {
+                    NavigationLink(value: NavigationDestination.search) {
                         Image(systemName: "magnifyingglass")//.frame(width: 150, height: 60)
                     }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "search"))
                     .focused($focusedButton, equals: "search")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    NavigationLink(destination: SettingView(immichService: immichService, baseURL: UserDefaults.standard.string(forKey: "baseURL") ?? "", apikey: UserDefaults.standard.string(forKey: "apikey") ?? "")) {
+                    NavigationLink(value: NavigationDestination.settings) {
+                    //NavigationLink(destination: SettingView(immichService: immichService), isActive: $configure) {
                         Image(systemName: "gear")//.frame(width: 150, height: 60)
                     }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "settings"))
                         .focused($focusedButton, equals: "settings")
+                }
+            }.onAppear{
+                Task {
+                   // if cameFromSetting {
+                        cameFromSetting = false
+                        error = false
+                        isLoading = true
+                        immichService.albumsGrouped.removeAll()
+                        if entitlementManager.notConfigured {
+                            user = ""
+                            focusedButton = "settings"
+                            self.error = true
+                            errorMessage = "not configured yet"
+                            isLoading = false
+                        } else {
+                            do {
+                                user = try await immichService.getMyUser()
+                                try await immichService.fetchAlbums()
+                                error = false
+                                isLoading = false
+                            } catch {
+                                self.error = true
+                                errorMessage = (error as NSError).domain
+                                immichService.albumsGrouped.removeAll()
+                                user = ""
+                                focusedButton = "settings"
+                                isLoading = false
+                            }
+                        }
+                    //}
+                }
+            }
+            // Define navigation destinations
+            .navigationDestination(for: NavigationDestination.self) { destination in
+                switch destination {
+                case .search:
+                    SearchView()
+                        .onAppear {
+                            if !slideActive {
+                                immichService.assetItemsGrouped.removeAll()
+                                immichService.assetItems.removeAll()
+                            }
+                        }
+                case .settings:
+                    SettingView(cameFromSetting: $cameFromSetting)
+                case .album(let albumId, let albumName):
+                    AlbumView(albumId: albumId, albumName: albumName, isLoading: $isLoading)
+                        .onAppear {
+                            if !slideActive {
+                                immichService.assetItemsGrouped.removeAll()
+                                immichService.assetItems.removeAll()
+                                isLoading = true
+                                Task {
+                                    do {
+                                        try Task.checkCancellation() // Throws if cancelled
+                                        try await immichService.fetchAssets(albumId: albumId)
+                                        isLoading = false
+                                    } catch {
+                                        print("Failed to fetch pictures: \(error)")
+                                        isLoading = false
+                                    }
+                                }
+                            }
+                        }
+                case .slide(let albumName, let index, let query):
+                    SlideshowView(albumName: albumName, index: index, query: query)
+                        .onAppear {
+                            slideActive = true
+                        }
+                        .onDisappear {
+                            slideActive = false
+                        }
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: focusedButton)
         }.navigationViewStyle(.stack) // Ensures consistent navigation behavior
             .accentColor(.primary) // Affects all interactive elements
-    }
-}
-
-struct ErrorView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        HStack {
-            Text("Error: No album selected").onTapGesture(count: 1) {
-                dismiss()
-            }
-        }
     }
 }
 
@@ -162,19 +165,15 @@ struct ImmichTVTaleStyle: ButtonStyle {
     
     func makeBody(configuration: Self.Configuration) -> some View {
         configuration.label
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isFocused || configuration.isPressed ? Color.purple :Color.gray.opacity(0.2)) // Light gray background
-            )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isFocused || configuration.isPressed ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(isFocused || configuration.isPressed ? Color.purple : Color.gray,
+                            lineWidth: isFocused || configuration.isPressed ? 2 : 0) // Dynamic border
             )
-            .foregroundStyle(isFocused || configuration.isPressed ? Color.purple : .primary) // Text color adapts to light/dark mode
             .textFieldStyle(.plain) // Removes default styling (optional)
             .focusable()
-            .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
+            .scaleEffect(isFocused || configuration.isPressed ? 1.1 : 1.0)
+            .zIndex(isFocused || configuration.isPressed ? 10 : 0) // Ensure bar is above image
     }
 }
 
