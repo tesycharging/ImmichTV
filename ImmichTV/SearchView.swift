@@ -32,6 +32,10 @@ struct SearchView: View {
     @State private var error = false
     @State private var errorMessage = ""
     @State private var searchProgress = false
+    #if targetEnvironment(macCatalyst)
+    @State private var showSlide = false
+    @State private var slideActive = false
+    #endif
     
 
     var body: some View {
@@ -96,11 +100,24 @@ struct SearchView: View {
                                 }
                             }
                         Spacer()
+#if targetEnvironment(macCatalyst)
+                    Button( action: {
+                        showSlide = true
+                        slideActive = true
+                    }) {
+                        Image(systemName: "play").frame(height: 32)
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
+                        .focused($focusedButton, equals: "slideshow")
+                        .fullScreenCover(isPresented: $showSlide, onDismiss: { slideActive = false }) {
+                            SlideshowView(query: query).environmentObject(immichService).environmentObject(entitlementManager)
+                        }
+                    #else
                         NavigationLink(value: NavigationDestination.slide(nil, nil, query)) {
                             Image(systemName: "play").frame(height: 32)//.buttonStyle(PlainButtonStyle())
                         }.disabled(immichService.assetItems.isEmpty)
                             .buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
                             .focused($focusedButton, equals: "slideshow")
+#endif
                     }.padding() //smartsearch
                     if error {
                         Text("\(errorMessage)").font(.caption).padding()

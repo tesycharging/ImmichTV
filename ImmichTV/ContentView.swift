@@ -27,6 +27,10 @@ struct ContentView: View {
     @State private var cameFromSetting: Bool = true
     @State private var isloading = true
     @State private var slideActive = false
+    #if targetEnvironment(macCatalyst)
+    @State private var showSearch = false
+    @State private var showSetting = false
+    #endif
  
 
     var body: some View {
@@ -48,17 +52,65 @@ struct ContentView: View {
                 }
             }.toolbar {
                 ToolbarItem(placement: .navigation) {
+#if targetEnvironment(macCatalyst)
+                    Button( action: {
+                        showSearch = true
+                        if !slideActive {
+                            immichService.assetItemsGrouped.removeAll()
+                            immichService.assetItems.removeAll()
+                        }
+                    }){
+                        Image(systemName: "magnifyingglass")
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "search"))
+                        .focused($focusedButton, equals: "search")
+                        .fullScreenCover(isPresented: $showSearch) {
+                            ZStack(alignment: .topLeading) {
+                                Button(action: {
+                                    showSearch = false
+                                }) {
+                                    Image(systemName: "x.square")//.padding(.horizontal, 30)
+                                }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "close"))
+                                    .focused($focusedButton, equals: "close")
+                                    .zIndex(1)
+                                    .padding(.leading, 20)
+                                SearchView().environmentObject(immichService).environmentObject(entitlementManager)
+                            }
+                        }
+                    #else
                     NavigationLink(value: NavigationDestination.search) {
                         Image(systemName: "magnifyingglass")//.frame(width: 150, height: 60)
                     }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "search"))
                     .focused($focusedButton, equals: "search")
+                    #endif
                 }
                 ToolbarItem(placement: .primaryAction) {
+#if targetEnvironment(macCatalyst)
+                    Button( action: {
+                        showSetting = true
+                    }){
+                        Image(systemName: "gear")
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "settings"))
+                        .focused($focusedButton, equals: "settings")
+                        .fullScreenCover(isPresented: $showSetting) {
+                            VStack(alignment: .leading) {
+                                Button(action: {
+                                    showSetting = false
+                                }) {
+                                    Image(systemName: "x.square")//.padding(.horizontal, 30)
+                                }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "close"))
+                                    .focused($focusedButton, equals: "close")
+                                    .zIndex(1)
+                                    .padding(.leading, 20)
+                                SettingView(cameFromSetting: $cameFromSetting).environmentObject(immichService).environmentObject(entitlementManager)
+                            }
+                        }
+                    #else
                     NavigationLink(value: NavigationDestination.settings) {
                     //NavigationLink(destination: SettingView(immichService: immichService), isActive: $configure) {
                         Image(systemName: "gear")//.frame(width: 150, height: 60)
                     }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "settings"))
                         .focused($focusedButton, equals: "settings")
+                    #endif
                 }
             }.onAppear{
                 Task {
