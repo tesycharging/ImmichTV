@@ -15,6 +15,7 @@ struct AlbumView: View {
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @FocusState private var focusedButton: String? // Track which button is focused
     @Environment(\.dismiss) private var dismiss
+    @State private var ascending = false
     #if targetEnvironment(macCatalyst)
     @State private var showSlide = false
     @State private var slideActive = false
@@ -22,6 +23,7 @@ struct AlbumView: View {
       
     var body: some View {
         ZStack(alignment: .topLeading) {
+#if targetEnvironment(macCatalyst)
             Button(action: {
                 dismiss()
             }) {
@@ -30,11 +32,33 @@ struct AlbumView: View {
                 .focused($focusedButton, equals: "close")
                 .zIndex(1)
                 .padding(.leading, 20)
+            #endif
             VStack(alignment: .leading, spacing: 100) {
                 Spacer()
                 ScrollView(.vertical, showsIndicators: false) {
                     HStack {
-                        Text("\(albumName)").font(.title).padding()
+                        VStack {
+                            Text("\(albumName)").font(.title)
+                            if !immichService.assetItems.isEmpty {
+                                Text("\(immichService.assetItems.count) Assets").font(.footnote)
+                            }
+                        }.padding()
+                        Button( action: {
+                            ascending.toggle()
+                            isLoading = true
+                            let assetItems = immichService.assetItems
+                            immichService.assetItems.removeAll()
+                            immichService.assetItems = assetItems.reversed()
+                            if entitlementManager.groupByDay {
+                                immichService.assetItemsGrouped.removeAll()
+                                immichService.assetItemsGrouped = immichService.groupAssets(assetItems: immichService.assetItems, ascending: ascending)
+                            }
+                            immichService.objectWillChange.send()
+                            isLoading = false
+                        }) {
+                            Image(systemName: ascending ? "arrow.up.square" : "arrow.down.app").frame(height: 32)
+                        }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "asc"))
+                            .focused($focusedButton, equals: "asc")
 #if targetEnvironment(macCatalyst)
                         Button( action: {
                             showSlide = true
@@ -66,7 +90,7 @@ struct AlbumView: View {
                                 Spacer()
                             }
                         } else {
-                            AssetsView(albumName: albumName).onAppear {
+                            AssetsView(albumName: albumName, ascending: $ascending).onAppear {
 #if os(tvOS)
                                 focusedButton = "slideshow"
 #endif

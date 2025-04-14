@@ -47,7 +47,7 @@ struct ContentView: View {
                     Text("no albums").font(.caption)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
-                        AssetsView(showAlbums: true)
+                        AssetsView(showAlbums: true, ascending: .constant(false))
                     }.navigationTitle("Immich Albums \(user == "" ? "" : "of \(user)")")
                 }
             }.toolbar {
@@ -144,6 +144,7 @@ struct ContentView: View {
                 }
             }
             // Define navigation destinations
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(for: NavigationDestination.self) { destination in
                 switch destination {
                 case .search:

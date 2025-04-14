@@ -36,6 +36,7 @@ struct SearchView: View {
     @State private var showSlide = false
     @State private var slideActive = false
     #endif
+    @State private var ascending = false
     
 
     var body: some View {
@@ -64,16 +65,34 @@ struct SearchView: View {
                                 .sheet(isPresented: $detailSearch) {
                                     SearchDetailView(smartquery: $smartquery, selectType: $selectType, isFavorite: $isFavorite, isNotInAlbum: $isNotInAlbum, isArchived: $isArchived, takenAfter: $takenAfter, takenBefore: $takenBefore, importedAfter: $importedAfter, search: $search, onDismiss: {
                                         self.detailSearchUsed = smartquery != "" || selectType != "ALL" || isFavorite || isNotInAlbum || isArchived || takenAfter != nil || takenBefore != nil || importedAfter != nil
+                                        if importedAfter != nil {
+                                            ascending = true
+                                        }
                                     })
                                 }
 #else
                                 .popover(isPresented: $detailSearch) {
                                     SearchDetailView(smartquery: $smartquery, selectType: $selectType, isFavorite: $isFavorite, isNotInAlbum: $isNotInAlbum, isArchived: $isArchived, takenAfter: $takenAfter, takenBefore: $takenBefore, importedAfter: $importedAfter, search: $search, onDismiss: {
                                         self.detailSearchUsed = smartquery != "" || selectType != "ALL" || isFavorite || isNotInAlbum || isArchived || takenAfter != nil || takenBefore != nil || importedAfter != nil
+                                        if importedAfter != nil {
+                                            ascending = true
+                                        }
                                     })
                                 } 
 #endif
                         }
+                        Button( action: {
+                            if matches != nil {
+                                immichService.assetItems.removeAll()
+                                immichService.assetItemsGrouped.removeAll()
+                                matches = nil
+                                search = true
+                            }
+                            ascending.toggle()
+                        }){
+                            Image(systemName: ascending ? "arrow.up.square" : "arrow.down.app").frame(height: 32)
+                        }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "asc"))
+                            .focused($focusedButton, equals: "asc")
                         Button(action: {
                             search = true
                         }) {
@@ -84,7 +103,7 @@ struct SearchView: View {
                                 if search {
                                     searchProgress = true
                                     search = false
-                                    query = Query(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter)
+                                    query = Query(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter, ascending: ascending)
                                     Task { @MainActor in
                                         do {
                                             query.page = try await immichService.searchAssets(query: query)
@@ -181,7 +200,7 @@ struct SearchView: View {
                             Spacer()
                         }
                     } else if !immichService.assetItems.isEmpty {
-                        AssetsView(query: query)
+                        AssetsView(query: query, ascending: $ascending)
                     }
                     Spacer()
                 }
@@ -216,11 +235,11 @@ class Query: Hashable {
     private var previousPage: Int? = nil
     private var nextPage: Int? = nil
     
-    init(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil) {
-        addQuery(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter)
+    init(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil, ascending: Bool = false) {
+        addQuery(smartquery: smartquery, selectType: selectType, isFavorite: isFavorite, isNotInAlbum: isNotInAlbum, isArchived: isArchived, takenAfter: takenAfter, takenBefore: takenBefore, importedAfter: importedAfter, ascending: ascending)
     }
     
-    func addQuery(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil) {
+    func addQuery(smartquery: String = "", selectType: String = "ALL", isFavorite: Bool = false, isNotInAlbum: Bool = false, isArchived: Bool = false, takenAfter: Date? = nil, takenBefore: Date? = nil, importedAfter: Date? = nil, ascending: Bool) {
         if smartquery != "" {
             body["query"] = smartquery
             isSmartSearch = true
@@ -249,6 +268,9 @@ class Query: Hashable {
         }
         if let ia = importedAfter {
             body["createdAfter"] = isoFormatter.string(from: ia)
+            //body["order"] = "asc"
+        }
+        if ascending {
             body["order"] = "asc"
         }
         body["page"] = 1

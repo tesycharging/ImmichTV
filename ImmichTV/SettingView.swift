@@ -322,9 +322,19 @@ struct AddMusicPopup: View {
                 isShowingMP3Picker = true
             }.immichTVTestFieldStyle(isFocused: focusedButton == "mp3")
                 .focused($focusedButton, equals: "mp3")
+            #if targetEnvironment(macCatalyst)
+                .background(isShowingMP3Picker ? DocumentPicker {
+                    key = $0.lastPathComponent
+                    value = $0.absoluteString
+                    print(key)
+                    print(value)
+                   // isShowingMP3Picker = false
+                } : nil)
+    #else
                 .sheet(isPresented: $isShowingMP3Picker) {
                     DocumentPicker(title: $key, selectedURL: $value)
                 }
+            #endif
             #endif
             HStack(spacing: 20) {
                 Button("Cancel") {
@@ -356,8 +366,12 @@ struct AddMusicPopup: View {
 #else
 // UIViewControllerRepresentable for UIDocumentPickerViewController
 struct DocumentPicker: UIViewControllerRepresentable {
+    #if targetEnvironment(macCatalyst)
+    var callback: (URL) -> Void
+    #else
     @Binding var title: String
     @Binding var selectedURL: String
+    #endif
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.mp3], asCopy: true)
@@ -370,19 +384,59 @@ struct DocumentPicker: UIViewControllerRepresentable {
         // No updates needed
     }
     
+#if targetEnvironment(macCatalyst)
+    func makeUIViewController(context: Context) -> UIViewController {
+      let controller = UIViewController()
+      controller.view.backgroundColor = .clear // invisible dummy controller
+
+      // Present after slight delay to ensure hierarchy is ready
+      DispatchQueue.main.async {
+          let types = [UTType.mp3]
+          let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+          picker.delegate = context.coordinator
+
+          if let root = UIApplication.shared.connectedScenes
+              .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
+              .first?.rootViewController {
+              root.present(picker, animated: true, completion: nil)
+          }
+      }
+
+      return controller
+  }
+    #endif
+    
     func makeCoordinator() -> Coordinator {
+#if targetEnvironment(macCatalyst)
+        Coordinator(callback: callback)
+        #else
         Coordinator(self)
+        #endif
     }
     
     class Coordinator: NSObject, UIDocumentPickerDelegate {
+        #if targetEnvironment(macCatalyst)
+        var callback: (URL) -> Void
+        #else
         let parent: DocumentPicker
+        #endif
         
+        #if targetEnvironment(macCatalyst)
+        init(callback: @escaping (URL) -> Void) {
+           self.callback = callback
+        }
+        #else
         init(_ parent: DocumentPicker) {
             self.parent = parent
         }
+        #endif
         
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let url = urls.first else { return }
+            #if targetEnvironment(macCatalyst)
+            print(url)
+            callback(url)
+            #else
             // Security-scoped resource access
             let shouldStopAccessing = url.startAccessingSecurityScopedResource()
             defer {
@@ -396,11 +450,10 @@ struct DocumentPicker: UIViewControllerRepresentable {
                 parent.title = permanentURL.lastPathComponent
                 parent.selectedURL = permanentURL.lastPathComponent
             }
+            #endif
         }
         
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            // Handle cancellation if needed
-        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {}
         
         // Function to copy the file to the Documents directory
         private func copyFileToDocumentsDirectory(from sourceURL: URL) -> URL? {

@@ -14,6 +14,7 @@ struct AssetsView: View {
     @State private var showAlbums: Bool
     @State private var albumName: String?
     @State private var query: Query?
+    @Binding var ascending: Bool
        
     
     let tilewidth: CGFloat
@@ -30,10 +31,11 @@ struct AssetsView: View {
     @State private var slideActive = false
     #endif
     
-    init(showAlbums: Bool = false, albumName: String? = nil, query: Query? = nil) {
+    init(showAlbums: Bool = false, albumName: String? = nil, query: Query? = nil, ascending: Binding<Bool>) {
         self._showAlbums = State(initialValue: showAlbums)
         self._albumName = State(initialValue: albumName)
         self._query = State(initialValue: query)
+        self._ascending = ascending//State(initialValue: ascending)
         #if os(tvOS)
         tilewidth = 300
         #else
@@ -59,35 +61,7 @@ struct AssetsView: View {
     func AssetCard(id: String) -> some View {
         ZStack(alignment: .bottom) {
             VStack {
-                AsyncImage(url: immichService.getImageUrl(id: id)) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                    case .success(let image):
-                        ZStack(alignment: .center) {
-                            image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
-                            image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
-                        }
-                    case .failure:
-                        AsyncImage(url: immichService.getImageUrl(id: id)) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                            case .success(let image):
-                                ZStack(alignment: .center) {
-                                    image.resizable().frame(width: tilewidth, height: tilewidth * 0.75).blur(radius: 10)
-                                    image.resizable().scaledToFit().frame(width: tilewidth - 4, height: (tilewidth * 0.75) - 3)
-                                }
-                            case .failure:
-                                Color.red.frame(width: tilewidth, height: tilewidth * 0.75).overlay(Text("Failed \(id)"))
-                            @unknown default:
-                                Color.gray.frame(width: tilewidth, height: tilewidth * 0.75)
-                            }
-                        }
-                    @unknown default:
-                        Color.gray.frame(width: tilewidth, height: tilewidth * 0.75)
-                    }
-                }
+                RetryableAsyncImage(url: immichService.getImageUrl(id: id), tilewidth: tilewidth)
             }
         }
         .cornerRadius(5)
@@ -143,7 +117,8 @@ struct AssetsView: View {
                     }
                 }
             } else if entitlementManager.groupByDay {
-                ForEach(immichService.assetItemsGrouped.keys.sorted().reversed(), id: \.self) { key in
+                ForEach(immichService.sortedGroupAssets(ascending: ascending), id: \.self) { key in
+                //ForEach(immichService.assetItemsGrouped.keys.sorted().reversed(), id: \.self) { key in
                     VStack(alignment: .leading, spacing: 0) {
                         Text("\(dateToString(date: key.adding(days: 1)))").font(.subheadline).padding()
                         LazyVGrid(columns: gridItems, spacing: 0) {

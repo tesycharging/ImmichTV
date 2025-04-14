@@ -288,35 +288,11 @@ struct SlideshowView: View {
                  Spacer()
              } else {
                  if !isVideoAndPlayable {
-                     AsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video)) { phase in
-                         switch phase {
-                         case .empty:
-                             ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                         case .success(let image):
-                             image.resizable().scaledToFit().ignoresSafeArea().cornerRadius(15)
-                                 .background(.black)
-                                 .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
-                                 .focused($focusedButton, equals: "image")
-                         case .failure:
-                             AsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video)) { phase in
-                                 switch phase {
-                                 case .empty:
-                                     ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                                 case .success(let image):
-                                     image.resizable().scaledToFit().ignoresSafeArea().cornerRadius(15)
-                                         .background(.black)
-                                         .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
-                                         .focused($focusedButton, equals: "image")
-                                 case .failure:
-                                     Color.gray.overlay(Text("Failed \(immichService.assetItems[currentIndex].originalFileName)"))
-                                 @unknown default:
-                                     Color.gray
-                                 }
-                             }
-                         @unknown default:
-                             Color.gray
-                         }
-                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                     RetryableAsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video))
+                         .background(.black)
+                         .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
+                         .focused($focusedButton, equals: "image")
+                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                          .overlay() {
                              albumTitle
                          }

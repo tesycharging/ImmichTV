@@ -33,6 +33,7 @@
 				ImmichTVApp.swift,
 				Model.swift,
 				"Preview Content/Preview Assets.xcassets",
+				RetryableAsyncImage.swift,
 				SearchDetailView.swift,
 				SearchView.swift,
 				SettingView.swift,
@@ -72,11 +73,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6302FC492DAC586400E3E370 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		630F3BFD2D888B520068BEF1 = {
 			isa = PBXGroup;
 			children = (
 				63380B142D98B06D004C816D /* ImmichShow.entitlements */,
 				630F3C082D888B520068BEF1 /* ImmichTV */,
+				6302FC492DAC586400E3E370 /* Frameworks */,
 				630F3C072D888B520068BEF1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -161,6 +170,8 @@
 			);
 			mainGroup = 630F3BFD2D888B520068BEF1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 630F3C072D888B520068BEF1 /* Products */;
 			projectDirPath = "";
@@ -337,7 +348,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -351,7 +362,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
@@ -370,7 +381,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -384,7 +395,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
@@ -403,7 +414,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -421,7 +432,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -442,7 +453,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -460,7 +471,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

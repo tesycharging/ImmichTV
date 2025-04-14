@@ -56,7 +56,7 @@ class ImmichService: ObservableObject {
         }
     }
     
-    private func groupAssets(assetItems: [AssetItem]) -> [Date: [AssetItem]] {
+    public func groupAssets(assetItems: [AssetItem], ascending: Bool) -> [Date: [AssetItem]] {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let isoFormatter2 = ISO8601DateFormatter()
@@ -75,11 +75,19 @@ class ImmichService: ObservableObject {
             //return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: date))!
             return Calendar.current.startOfDay(for: date)
         }
-        return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key > $1.key })
+        if ascending {
+            return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key < $1.key }) // reversaed (earliest to latest
+        } else {
+            return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key > $1.key })
+        }
+    }
+    
+    func sortedGroupAssets(ascending: Bool) -> [Date] {
+        assetItemsGrouped.keys.sorted { ascending ? $0 < $1 : $0 > $1 }
     }
     
     @MainActor
-    func fetchAssets(albumId: String) async throws {
+    func fetchAssets(albumId: String, ascending: Bool = false) async throws {
         if entitlementManager.demo {
             try? await Task.sleep(nanoseconds: UInt64(2 * 1000000000)) // Convert seconds to nanoseconds
             if albumId == "1" {
@@ -92,8 +100,11 @@ class ImmichService: ObservableObject {
                         AssetItem(id: "7.jpg", deviceAssetId: "web-Eublepharis_macularius_2009_G7.jpg-1673438640000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-09/Eublepharis_macularius_2009_G7.jpg", originalFileName: "Eublepharis_macularius_2009_G7.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z"),
                         AssetItem(id: "8.jpg", deviceAssetId: "web-Pogona_vitticeps_2009_G4.jpg-1673438828000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-08/Pogona_vitticeps_2009_G4.jpg", originalFileName: "Pogona_vitticeps_2009_G4.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z"),
                         AssetItem(id: "9.jpg", deviceAssetId: "web-Brachypelma_klaasi_2009_G12.jpg-1673438550000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-08/Brachypelma_klaasi_2009_G12.jpg", originalFileName: "Brachypelma_klaasi_2009_G12.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z")]
+                if ascending {
+                    assetItems = assetItems.reversed()
+                }
                 if entitlementManager.groupByDay {
-                    assetItemsGrouped = groupAssets(assetItems: assetItems)
+                    assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
                 }
             } else {
                 assetItems = [AssetItem(id: "11.jpg", deviceAssetId: "web-Telega_in_Sosonka_2017_G1.jpg-1673438906000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2017/2017-05-02/Telega_in_Sosonka_2017_G1.jpg", originalFileName: "Telega_in_Sosonka_2017_G1.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
@@ -101,8 +112,11 @@ class ImmichService: ObservableObject {
                         AssetItem(id: "13.jpg", deviceAssetId: "web-Calle_en_centro_de_Maracaibo.jpg-1673438560000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-02-23/Calle_en_centro_de_Maracaibo.jpg", originalFileName: "Calle_en_centro_de_Maracaibo.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
                         AssetItem(id: "14.jpg", deviceAssetId: "web-Police_car_Vienna_Volkswagen_Touran.jpg-1673438830000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-02-20/Police_car_Vienna_Volkswagen_Touran.jpg", originalFileName: "Police_car_Vienna_Volkswagen_Touran.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
                         AssetItem(id: "15.jpg", deviceAssetId: "web-S-3D_cycle-car_2011_G1.jpg-1673438864000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2011/2011-02-14/S-3D_cycle-car_2011_G1.jpg", originalFileName: "S-3D_cycle-car_2011_G1.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z")]
+                if ascending {
+                    assetItems = assetItems.reversed()
+                }
                 if entitlementManager.groupByDay {
-                    assetItemsGrouped = groupAssets(assetItems: assetItems)
+                    assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
                 }
             }
         } else {
@@ -112,9 +126,13 @@ class ImmichService: ObservableObject {
             let (data, _) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
             let asset = try JSONDecoder().decode(Asset.self, from: data)
-            assetItems = asset.assets//.filter{ $0.type == .image}
+            if ascending {
+                assetItems = asset.assets.reversed()
+            } else {
+                assetItems = asset.assets
+            }
             if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems)
+                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
             }
         }
     }
@@ -148,13 +166,17 @@ class ImmichService: ObservableObject {
                      AssetItem(id: "7.jpg", deviceAssetId: "web-S-3D_cycle-car_2011_G1.jpg-1673438864000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2011/2011-02-14/S-3D_cycle-car_2011_G1.jpg", originalFileName: "S-3D_cycle-car_2011_G1.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
                      AssetItem(id: "8.jpg", deviceAssetId: "web-Panoramic_view_of_San_Carlos_Island,_Zulia_State.jpg-1673438804000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-10-12/Panoramic_view_of_San_Carlos_Island,_Zulia_State.jpg", originalFileName: "Panoramic_view_of_San_Carlos_Island,_Zulia_State.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
                      AssetItem(id: "9.jpg", deviceAssetId: "web-Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg-1673438582000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2017/2017-04-21/Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg", originalFileName: "Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
-                     AssetItem(id: "11.jpg", deviceAssetId: "web-Calle_en_centro_de_Maracaibo.jpg-1673438560000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-02-23/Calle_en_centro_de_Maracaibo.jpg", originalFileName: "Calle_en_centro_de_Maracaibo.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
-                     AssetItem(id: "12.jpg", deviceAssetId: "web-Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg-1673438646000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2014/2014-08-01/Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg", originalFileName: "Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
-                     AssetItem(id: "13.jpg", deviceAssetId: "web-Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg-1673438566000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2015/2015-08-06/Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg", originalFileName: "Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
-                     AssetItem(id: "14.jpg", deviceAssetId: "web-Strandkörbe_in_Kühlungsborn-3-.jpg-1673438900000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-06-08/Strandkörbe_in_Kühlungsborn-3-.jpg", originalFileName: "Strandkörbe_in_Kühlungsborn-3-.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
-                     AssetItem(id: "15.jpg", deviceAssetId: "web-La_Restinga_Beach_3.jpg-1673438706000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-01-06/La_Restinga_Beach_3.jpg", originalFileName: "La_Restinga_Beach_3.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z")]
+                     AssetItem(id: "11.jpg", deviceAssetId: "web-Calle_en_centro_de_Maracaibo.jpg-1673438560000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-02-23/Calle_en_centro_de_Maracaibo.jpg", originalFileName: "Calle_en_centro_de_Maracaibo.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
+                     AssetItem(id: "12.jpg", deviceAssetId: "web-Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg-1673438646000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2014/2014-08-01/Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg", originalFileName: "Fishing_boats,_morning,_Beach,_Rincon_de_la_Victoria,_Andalusia,_Spain.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
+                     AssetItem(id: "13.jpg", deviceAssetId: "web-Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg-1673438566000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2015/2015-08-06/Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg", originalFileName: "Carrelet,_Esnandes,_Charente-Maritime,_august_2015.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
+                     AssetItem(id: "14.jpg", deviceAssetId: "web-Strandkörbe_in_Kühlungsborn-3-.jpg-1673438900000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-06-08/Strandkörbe_in_Kühlungsborn-3-.jpg", originalFileName: "Strandkörbe_in_Kühlungsborn-3-.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
+                     AssetItem(id: "15.jpg", deviceAssetId: "web-La_Restinga_Beach_3.jpg-1673438706000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-01-06/La_Restinga_Beach_3.jpg", originalFileName: "La_Restinga_Beach_3.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z")]
+            let ascending = ((query.body["order"] as? String) ?? "") == "asc"
+            if ascending {
+                assetItems = assetItems.reversed()
+            }
             if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems)
+                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
             }
             return nil
         } else {
@@ -180,7 +202,7 @@ class ImmichService: ObservableObject {
            
             assetItems = response.assets.items
             if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems)
+                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: false)
             }
             return nextPage
         }
