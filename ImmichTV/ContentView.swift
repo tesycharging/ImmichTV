@@ -204,9 +204,17 @@ struct ImmichTVButtonStyle: ButtonStyle {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
+                #if os(tvOS)
                     .stroke(isFocused || configuration.isPressed ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
+                #else
+                    .stroke(configuration.isPressed ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
+                #endif
             )
+#if os(tvOS)
             .foregroundStyle(isFocused || configuration.isPressed ? Color.purple : .primary) // Text color adapts to light/dark mode
+        #else
+            .foregroundStyle(configuration.isPressed ? Color.purple : .primary) // Text color adapts to light/dark mode
+        #endif
             .textFieldStyle(.plain) // Removes default styling (optional)
             .focusable()
             .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
@@ -242,9 +250,17 @@ struct ImmichTVSlideShowButtonStyle: ButtonStyle {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
+                #if os(tvOS)
                     .stroke(isFocused || configuration.isPressed ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
+                #else
+                    .stroke(configuration.isPressed ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
+                #endif
             )
+#if os(tvOS)
             .foregroundStyle(isFocused || configuration.isPressed ? Color.purple : Color.gray) // Text color adapts to light/dark mode
+        #else
+            .foregroundStyle(configuration.isPressed ? Color.purple : Color.gray) // Text color adapts to light/dark mode
+        #endif
             .textFieldStyle(.plain) // Removes default styling (optional)
             .focusable()
             .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
@@ -263,10 +279,19 @@ struct ImmichTVTextFieldStyle: ViewModifier {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
+                #if os(tvOS)
                     .stroke(isFocused ? Color.purple : Color.gray, lineWidth: 2) // Dynamic border
                     //.stroke(Color.gray, lineWidth: 2)
+                #else
+                    .stroke(Color.gray, lineWidth: 2) // Dynamic border
+                    //.stroke(Color.gray, lineWidth: 2)
+                #endif
             )
+#if os(tvOS)
             .foregroundStyle(isFocused ? .purple : .primary) // Text color adapts to light/dark mode
+#else
+            .foregroundStyle(.primary) // Text color adapts to light/dark mode
+#endif
             .font(.system(size: 16, weight: .medium, design: .rounded)) // Custom font
             .textFieldStyle(.plain) // Removes default styling (optional)
             .tint(.purple) // Cursor color

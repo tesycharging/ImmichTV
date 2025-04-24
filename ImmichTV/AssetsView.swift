@@ -61,7 +61,7 @@ struct AssetsView: View {
     func AssetCard(id: String) -> some View {
         ZStack(alignment: .bottom) {
             VStack {
-                RetryableAsyncImage(url: immichService.getImageUrl(id: id), tilewidth: tilewidth)
+                RetryableAsyncImage(url: immichService.getImageUrl(id: id), tilewidth: tilewidth, imageSize: .constant(CGSizeZero))
             }
         }
         .cornerRadius(5)

@@ -28,6 +28,20 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "URL(string: value)?.scheme">
+            </PersistentString>
+            <PersistentString
+               value = "!fileManager.fileExists(atPath: url.path)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
+      </ContextState>
+      <ContextState
          contextName = "ImmichService.getMyUser():ImmichService.swift">
          <PersistentStrings>
             <PersistentString
@@ -36,24 +50,10 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
-      </ContextState>
-      <ContextState
          contextName = "closure #3 in closure #1 in SettingView.pickers.getter:SettingView.swift">
          <PersistentStrings>
             <PersistentString
                value = "baseURL">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "URL(string: value)?.scheme">
-            </PersistentString>
-            <PersistentString
-               value = "!fileManager.fileExists(atPath: url.path)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -76,6 +76,17 @@
          <PersistentStrings>
             <PersistentString
                value = "UserDefaults.standard.string(forKey: &quot;timeinterval&quot;)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #2 in closure #1 in closure #1 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "width / g.size.width">
+            </PersistentString>
+            <PersistentString
+               value = "offsetStepX">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

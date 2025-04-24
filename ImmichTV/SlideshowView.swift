@@ -9,6 +9,7 @@ import SwiftUI
 import Combine
 import AVKit
 import AVFoundation
+import UIKit
 
 struct SlideshowView: View {
     @EnvironmentObject private var immichService: ImmichService
@@ -39,6 +40,31 @@ struct SlideshowView: View {
     @State private var exifInfo: ExifInfo? = nil
     
     @State private var playerMusic: AVPlayer?
+    
+    @State private var zoomScale: CGFloat = 1.0 {
+        didSet {
+            if zoomScale == minScale {
+                offsetStepX = 0
+                offsetStepY = 0
+                offset = .zero
+            } else {
+                isBarVisible = false
+                running = false
+            }
+        }
+    }
+    private let minScale: CGFloat = 1.0
+    private let maxScale: CGFloat = 5.0
+    @State private var offsetStepX: CGFloat = 0
+    @State private var offsetStepY: CGFloat = 0
+    @State private var imageSize: CGSize = CGSizeZero
+    @State private var slideSize: CGSize = CGSizeZero
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+#if os(tvOS)
+    #else
+    @State private var lastScale: CGFloat = 1.0
+    #endif
       
     
     init(albumName: String? = nil, index: Int? = nil, query: Query? = nil) {
@@ -134,8 +160,8 @@ struct SlideshowView: View {
         VStack(alignment: .center, spacing: 40) {
             HStack(alignment: .top) {
                 Spacer()
-                HStack {
-                    VStack(alignment: .trailing) {
+                VStack(alignment: .trailing) {
+                    HStack {
                         if (showVideoButton) {
                             Button(action: {
                                 timerSubscription?.cancel()
@@ -143,10 +169,38 @@ struct SlideshowView: View {
                                 running = false
                                 thumbnail = false
                             }) {
-                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo").padding(.horizontal, 30)
+                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo")
                             }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "videoButton"))
                                 .focused($focusedButton, equals: "videoButton")
                         }
+                    }.padding()
+                        .background(Color.black.opacity(0.5)) // Transparent background
+                        .cornerRadius(15)
+                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
+                        .zIndex(1) // Ensure bar is above image
+                        .padding(.top, 20)
+                }
+            }
+            Spacer()
+        }
+    }
+    
+    var zoomOutButton: some View {
+        VStack(alignment: .center, spacing: 40) {
+            HStack(alignment: .top) {
+                Spacer()
+                HStack {
+                    VStack(alignment: .trailing) {
+                        Button(action: {
+                            zoomScale = minScale
+                            showToolbar()
+                        }) {
+                            Image(systemName: "minus.magnifyingglass")
+                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "zoomout"))
+                            .focused($focusedButton, equals: "zoomout")
+                            .onAppear{
+                                focusedButton = "zoomout"
+                            }
                     }
                 }.padding()
                     .background(Color.black.opacity(0.5)) // Transparent background
@@ -169,7 +223,7 @@ struct SlideshowView: View {
                         UIApplication.shared.isIdleTimerDisabled = false
                         dismiss()
                     }) {
-                        Image(systemName: "x.square").padding(.horizontal, 30)
+                        Image(systemName: "x.square")
                     }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "close"))
                         .focused($focusedButton, equals: "close")
                 }.padding()
@@ -180,8 +234,8 @@ struct SlideshowView: View {
                     .padding(.top, 20)
 #endif
                 Spacer()
-                HStack {
-                    VStack(alignment: .trailing) {
+                VStack(alignment: .trailing) {
+                    HStack {
                         if !entitlementManager.demo {
                             Button(action: {
                                 showToolbar()
@@ -197,7 +251,7 @@ struct SlideshowView: View {
                                     }
                                 }
                             }) {
-                                Image(systemName: isFavorite ? "heart.fill" : "heart").padding(.horizontal, 30)
+                                Image(systemName: isFavorite ? "heart.fill" : "heart")
                             }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "favorite"))
                                 .focused($focusedButton, equals: "favorite")
                         }
@@ -207,20 +261,32 @@ struct SlideshowView: View {
                                 running = false
                                 thumbnail = false
                             }) {
-                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo").padding(.horizontal, 30)
+                                Image(systemName: immichService.assetItems[currentIndex].type == .video ? "video" : "photo")
                             }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "original"))
                                 .focused($focusedButton, equals: "original")
                         }
+                        Button(action: {
+                            zoomScale = maxScale
+                        }) {
+                            Image(systemName: "plus.magnifyingglass")
+                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "zoom"))
+                            .focused($focusedButton, equals: "zoom")
+                    }.padding()
+                        .background(Color.black.opacity(0.5)) // Transparent background
+                        .cornerRadius(15)
+                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
+                        .zIndex(1) // Ensure bar is above image
+                        .padding(.top, 20)
+                    HStack {
                         if exifInfo != nil {
                             exifInfoView(exifInfo: exifInfo!)
                         }
-                    }
-                }.padding()
-                    .background(Color.black.opacity(0.5)) // Transparent background
-                    .cornerRadius(15)
-                    .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                    .zIndex(1) // Ensure bar is above image
-                    .padding(.top, 20)
+                    }.padding()
+                        .background(Color.black.opacity(0.5)) // Transparent background
+                        .cornerRadius(15)
+                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
+                        .zIndex(1) // Ensure bar is above image
+                }
             }
             Spacer()
             HStack(alignment: .bottom){
@@ -275,6 +341,172 @@ struct SlideshowView: View {
                 (immichService.assetItems[currentIndex].type == .video && !entitlementManager.slideShowOfThumbnails && entitlementManager.playVideo))
     }
      
+#if os(tvOS)
+    /*private func zoomOffset(direction: MoveCommandDirection, slideSize: CGSize) {
+        let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
+        switch direction {
+        case .left:
+            offsetStepX = offsetStepX == maxOffsetStep ? maxOffsetStep : offsetStepX + 1
+        case .right:
+            offsetStepX = offsetStepX == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepX - 1
+        case .up:
+            offsetStepY = offsetStepY == maxOffsetStep ? maxOffsetStep : offsetStepY + 1
+        case .down:
+            offsetStepY = offsetStepY == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepY - 1
+        @unknown default:
+            break
+        }
+        focusedButton = "zoomout"
+        let newOffset = CGSize(
+            width: offset.width + offsetStepX * slideSize.width / maxScale,
+            height: offset.height + offsetStepY * slideSize.height / maxScale
+        )
+        offset = newOffset
+        print("x: \(offsetStepX), y: \(offsetStepY)")
+        print(offset)
+        //clampOffset(for: zoomScale)
+        print(offset)
+    }*/
+    
+    private func zoomOffset(direction: MoveCommandDirection, slideSize: CGSize) {
+        let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
+        let isPortrait = imageSize.height > imageSize.width
+        switch direction {
+        case .left:
+            offsetStepX = offsetStepX == maxOffsetStep ? maxOffsetStep : offsetStepX + 1
+            if !isPortrait {
+                offset.width = slideSize.width * offsetStepX
+            } else {
+                let blackX = offsetStepX > 0 ? (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / 2 : (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / -2
+                let width = imageSize.width / (imageSize.height / slideSize.height) * zoomScale
+                if (width / slideSize.width) <= 1 || offsetStepX == 0 {
+                    offset.width = 0
+                } else if (width / slideSize.width) <= (maxOffsetStep + 1) || offsetStepX == maxOffsetStep {
+                    offset.width = blackX == 0 ? blackX + offsetStepX * slideSize.width : blackX
+                } else {
+                    offset.width = blackX + offsetStepX * slideSize.width
+                }
+            }
+        case .right:
+            offsetStepX = offsetStepX == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepX - 1
+            if !isPortrait {
+                offset.width = slideSize.width * offsetStepX
+            } else {
+                let blackX = offsetStepX > 0 ? (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / 2 : (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / -2
+                let width = imageSize.width / (imageSize.height / slideSize.height) * zoomScale
+                if (width / slideSize.width) <= 1 || offsetStepX == 0 {
+                    offset.width = 0
+                } else if (width / slideSize.width) <= (maxOffsetStep + 1) || offsetStepX == maxOffsetStep {
+                    offset.width = blackX == 0 ? blackX + offsetStepX * slideSize.width : blackX
+                } else {
+                    offset.width = blackX + offsetStepX * slideSize.width
+                }
+            }
+        case .up:
+            offsetStepY = offsetStepY == maxOffsetStep ? maxOffsetStep : offsetStepY + 1
+            if isPortrait {
+                offset.height = slideSize.height * offsetStepY
+            } else {
+                let blackY = offsetStepY > 0 ? (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / 2 : (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / -2
+                let height = imageSize.height / (imageSize.width / slideSize.width) * zoomScale
+                if (height / slideSize.height) <= 1 || offsetStepY == 0 {
+                    offset.height = 0
+                } else if (height / slideSize.height) <= (maxOffsetStep + 1) || offsetStepY == maxOffsetStep {
+                    offset.height = blackY == 0 ? blackY + offsetStepY * slideSize.height : blackY
+                } else {
+                    offset.height = blackY + offsetStepY * slideSize.height
+                }
+            }
+        case .down:
+            offsetStepY = offsetStepY == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepY - 1
+            if isPortrait {
+                offset.height = slideSize.height * offsetStepY
+            } else {
+                let blackY = offsetStepY > 0 ? (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / 2 : (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / -2
+                let height = imageSize.height / (imageSize.width / slideSize.width) * zoomScale
+                if (height / slideSize.height) <= 1 || offsetStepY == 0 {
+                    offset.height = 0
+                } else if (height / slideSize.height) <= (maxOffsetStep + 1) || offsetStepY == maxOffsetStep {
+                    offset.height = blackY == 0 ? blackY + offsetStepY * slideSize.height : blackY
+                } else {
+                    offset.height = blackY + offsetStepY * slideSize.height
+                }
+            }
+        @unknown default:
+            break
+        }
+        focusedButton = "zoomout"
+    }
+    
+    private func arrowCommands(direction: MoveCommandDirection) {
+        switch direction {
+        case .left:
+            if !isBarVisible {
+                self.goToPreviousItem()
+            } else {
+                if focusedButton == nil {
+                    focusedButton = "privious"
+                }
+                if isBarVisible {
+                    showToolbar()
+                }
+            }
+        case .right:
+            if !isBarVisible {
+                self.goToNextItem()
+            } else {
+                if focusedButton == nil {
+                    focusedButton = "next"
+                }
+                showToolbar()
+            }
+        case .up:
+            if isBarVisible {
+                focusedButton = "favorite"
+            } else {
+                focusedButton = "playpause"
+            }
+            showToolbar()
+        case .down:
+            withAnimation(.easeInOut(duration: 0.3)) {
+                if isBarVisible {
+                    if ((focusedButton == "privious" || focusedButton == "next" || focusedButton == "playpause")) {
+                        isBarVisible = false
+                    } else if focusedButton == "favorite" {
+                        if entitlementManager.slideShowOfThumbnails || (immichService.assetItems[currentIndex].type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails) {
+                            focusedButton = "original"
+                        } else {
+                            focusedButton = "playpause"
+                        }
+                        showToolbar()
+                    } else {
+                        focusedButton = "playpause"
+                        showToolbar()
+                    }
+                } else {
+                    isBarVisible = true
+                    focusedButton = "playpause"
+                    showToolbar()
+                }
+            }
+            default:
+                break
+            }
+    }
+    #endif
+    // Clamp offset to keep image within viewable bounds
+    private func clampOffset(for scale: CGFloat) {
+        let scaledSize = CGSize(
+            width: imageSize.width * scale,
+            height: imageSize.height * scale
+        )
+        let maxOffsetX = (scaledSize.width - imageSize.width) / 2
+        let maxOffsetY = (scaledSize.height - imageSize.height) / 2
+        
+        offset.width = min(max(offset.width, -maxOffsetX), maxOffsetX)
+        offset.height = min(max(offset.height, -maxOffsetY), maxOffsetY)
+    }
+    
      var body: some View {
          ZStack(alignment: .center) {
              Color.black.ignoresSafeArea() // Full-screen background
@@ -288,17 +520,123 @@ struct SlideshowView: View {
                  Spacer()
              } else {
                  if !isVideoAndPlayable {
-                     RetryableAsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video))
-                         .background(.black)
-                         .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
-                         .focused($focusedButton, equals: "image")
-                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                         .overlay() {
-                             albumTitle
-                         }
-                         .onAppear {
-                             isFavorite = immichService.assetItems[currentIndex].isFavorite
-                         }
+                     GeometryReader { g in
+                         RetryableAsyncImage(url: immichService.getImageUrl(id: immichService.assetItems[currentIndex].id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: immichService.assetItems[currentIndex].type == .video), imageSize: $imageSize)
+                             .background(.black)
+                             .scaleEffect(zoomScale)
+                             .focusable(isBarVisible ? false : true) // Only focus image when bar is hidden
+                             .focused($focusedButton, equals: "image")
+                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                             .offset(x: offset.width, y: offset.height)
+#if os(tvOS)
+                             .onTapGesture(count: 1) {
+                                 withAnimation(.easeInOut) {
+                                     // Toggle between min and max scale
+                                     zoomScale = zoomScale == minScale ? maxScale : minScale
+                                 }
+                             }
+#else
+                             .gesture(
+                                // Pinch-to-zoom
+                                MagnifyGesture()
+                                    .onChanged { value in
+                                        let newScale = max(min(lastScale * value.magnification, maxScale), minScale)
+                                        zoomScale = newScale
+                                        clampOffset(for: newScale)
+                                    }
+                                    .onEnded { _ in
+                                        lastScale = zoomScale
+                                        clampOffset(for: zoomScale)
+                                    }
+                                    .simultaneously(with: DragGesture()
+                                        .onChanged { value in
+                                            if zoomScale == minScale {
+                                                // Update offset while dragging
+                                                swipeOffset = value.translation.width
+                                            } else {
+                                                let newOffset = CGSize(
+                                                    width: lastOffset.width + value.translation.width,
+                                                    height: lastOffset.height + value.translation.height
+                                                )
+                                                offset = newOffset
+                                                clampOffset(for: zoomScale)
+                                            }
+                                        }
+                                        .onEnded { value in
+                                            if zoomScale == minScale {
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    // Determine swipe direction based on final position
+                                                    if value.translation.width > 50 {
+                                                        self.goToPreviousItem()
+                                                        withAnimation {
+                                                            swipeOffset = 100 // Move right
+                                                        }
+                                                    } else if value.translation.width < -50 {
+                                                        self.goToNextItem()
+                                                        withAnimation {
+                                                            swipeOffset = -100 // Move left
+                                                        }
+                                                    }
+                                                    swipeOffset = 0
+                                                }
+                                            } else {
+                                                lastOffset = offset
+                                                clampOffset(for: zoomScale)
+                                            }
+                                        }
+                                                   )
+                             )
+                             .gesture(
+                                // Double-tap to toggle zoom
+                                TapGesture(count: 2)
+                                    .onEnded {
+                                        withAnimation(.easeInOut) {
+                                            if zoomScale > minScale {
+                                                // Reset to default
+                                                zoomScale = minScale
+                                                offset = .zero
+                                                lastScale = minScale
+                                                lastOffset = .zero
+                                            } else {
+                                                // Zoom to 2x
+                                                zoomScale = 2.0
+                                                lastScale = 2.0
+                                                clampOffset(for: 2.0)
+                                            }
+                                        }
+                                    }
+                             )
+                             .onTapGesture(count: 1) {
+                                 if zoomScale == minScale {
+                                     withAnimation {
+                                         if isBarVisible {
+                                             isBarVisible = false
+                                             timerSubscription?.cancel()
+                                             timerSubscription = nil
+                                         } else {
+                                             showToolbar()
+                                         }
+                                     }
+                                 }
+                             }
+                             .gesture(
+                                LongPressGesture(minimumDuration: 1)
+                                    .onEnded { _ in
+                                    withAnimation {
+                                        UIApplication.shared.isIdleTimerDisabled = false
+                                        dismiss()
+                                    }
+                                }
+                             )
+#endif
+                             .overlay() {
+                                 albumTitle
+                             }
+                             .onAppear {
+                                 isFavorite = immichService.assetItems[currentIndex].isFavorite
+                                 slideSize = g.size
+                             }
+                     }
                  } else {
                      VideoPlayer(player: playerViewModel.player).frame(maxWidth: .infinity, maxHeight: .infinity)
                          .aspectRatio(contentMode: .fit) // Maintain video's aspect ratio, fitting within bounds
@@ -315,7 +653,11 @@ struct SlideshowView: View {
                  if isBarVisible {
                      toolBar
                  } else {
-                     videoButton
+                     if zoomScale == minScale {
+                         videoButton
+                     } else {
+                         zoomOutButton
+                     }
                  }
              }
          }
@@ -324,114 +666,22 @@ struct SlideshowView: View {
          .ignoresSafeArea()
          .navigationBarBackButtonHidden(true)// Hides the back button
         #if os(tvOS)
+         .onPlayPauseCommand {
+             running.toggle()
+             if running {
+                 showAlbumName = true
+                 zoomScale = minScale
+             }
+         }
          .onMoveCommand { direction in // Handle arrow key/remote input
-             switch direction {
-             case .left:
-                 if !isBarVisible {
-                     self.goToPreviousItem()
-                 } else {
-                     if focusedButton == nil {
-                         focusedButton = "privious"
-                     }
-                     if isBarVisible {
-                         showToolbar()
-                     }
-                 }
-             case .right:
-                 if !isBarVisible {
-                     self.goToNextItem()
-                 } else {
-                     if focusedButton == nil {
-                         focusedButton = "next"
-                     }
-                     showToolbar()
-                 }
-             case .up:
-                 if isBarVisible {
-                     focusedButton = "favorite"
-                 } else {
-                     focusedButton = "playpause"
-                 }
-                 showToolbar()
-             case .down:
-                 withAnimation(.easeInOut(duration: 0.3)) {
-                     if isBarVisible {
-                         if ((focusedButton == "privious" || focusedButton == "next" || focusedButton == "playpause")) {
-                             isBarVisible = false
-                         } else if focusedButton == "favorite" {
-                             if entitlementManager.slideShowOfThumbnails || (immichService.assetItems[currentIndex].type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails) {
-                                 focusedButton = "original"
-                             } else {
-                                 focusedButton = "playpause"
-                             }
-                             showToolbar()
-                         } else {
-                             focusedButton = "playpause"
-                             showToolbar()
-                         }
-                     } else {
-                         isBarVisible = true
-                         focusedButton = "playpause"
-                         showToolbar()
-                     }
-                 }
-             default:
-                 break
+             if zoomScale > minScale {
+                 zoomOffset(direction: direction, slideSize: slideSize)
+             } else {
+                 arrowCommands(direction: direction)
              }
-           }
-         #else
+         }
+        #else
          .offset(x: swipeOffset) // Moves the text based on swipe
-         .gesture(
-             DragGesture()
-                 .onChanged { value in
-                     // Update offset while dragging
-                     swipeOffset = value.translation.width
-                 }
-                .onEnded { value in
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        // Determine swipe direction based on final position
-                        if value.translation.width > 50 {
-                            self.goToPreviousItem()
-                            withAnimation {
-                                swipeOffset = 100 // Move right
-                            }
-                        } else if value.translation.width < -50 {
-                            self.goToNextItem()
-                            withAnimation {
-                                swipeOffset = -100 // Move left
-                            }
-                        }
-                        swipeOffset = 0
-                    }
-                }
-         )
-         .onTapGesture(count: 1) {
-             withAnimation {
-                 if isBarVisible {
-                     isBarVisible = false
-                     timerSubscription?.cancel()
-                     timerSubscription = nil
-                 } else {
-                     showToolbar()
-                 }
-             }
-         }
-         .onTapGesture(count: 2) {
-             withAnimation {
-                 UIApplication.shared.isIdleTimerDisabled = false
-                 dismiss()
-             }
-         }
-         .onTapGesture(count: 3) {
-             withAnimation {
-                 running = false
-                 thumbnail = false
-                 // focusedButton = "playpause"
-                 if isBarVisible {
-                     showToolbar()
-                 }
-             }
-         }
          #endif
          .background(Color.black)
          .onAppear {
