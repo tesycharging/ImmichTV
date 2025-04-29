@@ -29,12 +29,12 @@ applic</key>
 </string>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
-</dict>
-<key>NSAppTransportSecurity</key>
-<dict>
-<key>NSAllowsArbitraryLoads</key>
-<true/>
-<key>NSExceptionAllowsInsecureHTTPLoads</key>
-<true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+    <key>NSExceptionAllowsInsecureHTTPLoads</key>
+    <true/>
+    </dict>
 </dict>
 </plist>
