@@ -133,7 +133,7 @@ struct ContentView: View {
                                 isLoading = false
                             } catch {
                                 self.error = true
-                                errorMessage = (error as NSError).domain
+                                errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
                                 immichService.albumsGrouped.removeAll()
                                 user = ""
                                 focusedButton = "settings"

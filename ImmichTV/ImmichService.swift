@@ -52,7 +52,7 @@ class ImmichService: ObservableObject {
             if data.count == 2 {
                 throw NSError(domain: "no albums found", code: 100)
             }
-            albumsGrouped = groupAlbums(albums: try JSONDecoder().decode([Album].self, from: data))
+            albumsGrouped = groupAlbums(albums: try decoder(data))
         }
     }
     
@@ -125,7 +125,7 @@ class ImmichService: ObservableObject {
             }
             let (data, _) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            let asset = try JSONDecoder().decode(Asset.self, from: data)
+            let asset: Asset = try decoder(data)
             if ascending {
                 assetItems = asset.assets.reversed()
             } else {
@@ -213,8 +213,7 @@ class ImmichService: ObservableObject {
             throw NSError(domain: "url doesn't work", code: 100)
         }
         let (data, _) = try await URLSession.shared.data(from: url)
- 
-        return try JSONDecoder().decode(AssetItem.self, from: data)
+        return try decoder(data)
     }
     
     func getMyUser() async throws -> String {
@@ -226,7 +225,7 @@ class ImmichService: ObservableObject {
             }
             let (data, _) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            let user = try JSONDecoder().decode(User.self, from: data)
+            let user: User = try decoder(data)
             return user.name
         }
     }
@@ -239,7 +238,7 @@ class ImmichService: ObservableObject {
                 throw NSError(domain: "url doesn't work", code: 100)
             }
             let (data, _) = try await URLSession.shared.data(from: url)
-            return try JSONDecoder().decode(Storage.self, from: data)
+            return try decoder(data)
         }
     }
     
@@ -257,8 +256,7 @@ class ImmichService: ObservableObject {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, _) = try await URLSession.shared.data(for: request)
-        let assetItem = try JSONDecoder().decode(AssetItem.self, from: data)
-        return assetItem
+        return try decoder(data)
     }
 }
 
@@ -280,7 +278,7 @@ extension ImmichService {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, _) = try await URLSession.shared.data(for: request)
-        let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
+        let loginResponse: LoginResponse = try decoder(data)
         return loginResponse.accessToken
     }
     
@@ -305,8 +303,19 @@ extension ImmichService {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
             let (data, _) = try await URLSession.shared.data(for: request)
-            let apiKeyResponse = try JSONDecoder().decode(APIRequestResponse.self, from: data)
+            let apiKeyResponse: APIRequestResponse = try decoder(data)
             return apiKeyResponse.apiKey.id
+        }
+    }
+}
+
+extension ImmichService {
+    func decoder<T: Decodable>(_ data: Data) throws -> T {
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            let failure = try JSONDecoder().decode(ErrorMessage.self, from: data)
+            throw NSError(domain: failure.error, code: failure.statusCode, userInfo: ["message":failure.message])
         }
     }
 }

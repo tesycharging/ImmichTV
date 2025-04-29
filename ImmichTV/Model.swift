@@ -131,3 +131,9 @@ struct APIKeyResponse: Codable {
     let id: String
     let name: String
 }
+
+struct ErrorMessage: Codable {
+    let message: String
+    let error: String
+    let statusCode: Int
+}
