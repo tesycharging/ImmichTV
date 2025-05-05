@@ -9,7 +9,28 @@ import Foundation
 import SwiftUI
 
 class EntitlementManager: ObservableObject {
+    @AppStorage("processCompletedCount", store: UserDefaults.group)
+    var processCompletedCount = 0
     
+    @AppStorage("lastVersionPromptedForReview", store: UserDefaults.group)
+    var lastVersionPromptedForReview: String?
+
+    var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as? String ?? "1.0"
+    }
+    
+    // Dynamically retrieve App Store ID from Info.plist
+    var appStoreID: String? {
+        Bundle.main.infoDictionary?["CFBundleAppStoreID"] as? String
+    }
+
+    // Construct review URL dynamically
+    var reviewURL: String {
+        return "https://apps.apple.com/app/6743646520?action=write-review"
+        //guard let appStoreID = appStoreID else { return nil }
+        //return URL(string: "https://apps.apple.com/app/\(appStoreID)?action=write-review")
+    }
+
     @AppStorage("baseURL", store: UserDefaults.group)
     var baseURL = "" // Replace with your Immich server URL
     

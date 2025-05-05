@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Foundation
+import StoreKit
+import CoreImage.CIFilterBuiltins
 
 // Define navigation destinations
 enum NavigationDestination: Hashable {
@@ -19,6 +21,12 @@ enum NavigationDestination: Hashable {
 struct ContentView: View {
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @EnvironmentObject private var immichService: ImmichService
+#if os(tvOS)
+    @State private var showReviewPrompt = false
+    @Environment(\.openURL) private var openURL
+    #else
+    @Environment(\.requestReview) private var requestReview
+    #endif
     @FocusState private var focusedButton: String? // Track which button is focused
     @State var user = ""
     @State var error = false
@@ -33,6 +41,17 @@ struct ContentView: View {
     @State private var showSetting = false
     #endif
  
+    func generateQRCode(from string: String) -> UIImage {
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(string.utf8)
+
+        if let outputImage = filter.outputImage,
+           let cgImage = context.createCGImage(outputImage, from: outputImage.extent) {
+            return UIImage(cgImage: cgImage)
+        }
+        return UIImage(systemName: "xmark.circle") ?? UIImage()
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -48,6 +67,25 @@ struct ContentView: View {
                     Text("no albums").font(.caption)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
+                        #if os(tvOS)
+                        if showReviewPrompt {
+                            VStack {
+                                Text("Enjoying the app? Leave us a review!")
+                                    .font(.caption)
+                                HStack {
+                                    Image(uiImage: generateQRCode(from: entitlementManager.reviewURL)).resizable().scaledToFit().frame(width: 100, height: 100)
+                                    Button("Not Now") {
+                                        showReviewPrompt = false
+                                    }
+                                    .buttonStyle(.bordered).font(.caption)
+                                }
+                            }
+                            .padding()
+                            .background(Color.secondary)
+                            .cornerRadius(10)
+                            .shadow(radius: 5)
+                        }
+                        #endif
                         AssetsView(showAlbums: true, ascending: .constant(false))
                     }.navigationTitle("Immich Albums \(user == "" ? "" : "of \(user)")")
                 }
@@ -146,6 +184,18 @@ struct ContentView: View {
                             }
                         }
                     //}
+                    entitlementManager.processCompletedCount += 1
+                    guard entitlementManager.processCompletedCount >= 4, entitlementManager.lastVersionPromptedForReview != entitlementManager.currentVersion else { return }
+                    #if os(tvOS)
+                    showReviewPrompt = true
+                    entitlementManager.lastVersionPromptedForReview = entitlementManager.currentVersion
+                    #else
+                    Task {
+                        try await Task.sleep(for: .seconds(2)) // Delay to avoid interrupting user
+                        requestReview()
+                        entitlementManager.lastVersionPromptedForReview = entitlementManager.currentVersion
+                    }
+                    #endif
                 }
             }
             // Define navigation destinations

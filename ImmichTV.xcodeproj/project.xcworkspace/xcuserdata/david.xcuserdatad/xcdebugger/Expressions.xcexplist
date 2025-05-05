@@ -44,19 +44,13 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "closure #1 in closure #3 in closure #1 in ContentView.body.getter:ContentView.swift">
+         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
          <PersistentStrings>
             <PersistentString
-               value = "(error as NSError).userInfo">
+               value = "URL(string: value)?.scheme">
             </PersistentString>
             <PersistentString
-               value = "(error as NSError).code">
-            </PersistentString>
-            <PersistentString
-               value = "error is NSURLErrorDomain">
-            </PersistentString>
-            <PersistentString
-               value = "(error as NSError).domain">
+               value = "!fileManager.fileExists(atPath: url.path)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -68,6 +62,14 @@
             </PersistentString>
             <PersistentString
                value = "offsetStepX">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #1 in closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "entitlementManager.reviewURL">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -97,13 +99,28 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
+         contextName = "closure #1 in closure #3 in closure #1 in ContentView.body.getter:ContentView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "URL(string: value)?.scheme">
+               value = "(error as NSError).userInfo">
             </PersistentString>
             <PersistentString
-               value = "!fileManager.fileExists(atPath: url.path)">
+               value = "(error as NSError).code">
+            </PersistentString>
+            <PersistentString
+               value = "error is NSURLErrorDomain">
+            </PersistentString>
+            <PersistentString
+               value = "entitlementManager.currentVersion">
+            </PersistentString>
+            <PersistentString
+               value = "(error as NSError).domain">
+            </PersistentString>
+            <PersistentString
+               value = "entitlementManager.processCompletedCount">
+            </PersistentString>
+            <PersistentString
+               value = "showReviewPrompt">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
