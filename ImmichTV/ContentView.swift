@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 // Define navigation destinations
 enum NavigationDestination: Hashable {
@@ -133,7 +134,11 @@ struct ContentView: View {
                                 isLoading = false
                             } catch {
                                 self.error = true
-                                errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
+                                if (error as NSError).domain == "NSURLErrorDomain" {
+                                    errorMessage = "\((error as NSError).code) \((error as NSError).domain)"
+                                } else {
+                                    errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
+                                }
                                 immichService.albumsGrouped.removeAll()
                                 user = ""
                                 focusedButton = "settings"

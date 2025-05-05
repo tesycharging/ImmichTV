@@ -3,20 +3,6 @@
    version = "1.0">
    <ContextStates>
       <ContextState
-         contextName = "DateSelectionView.formattedDate.getter:DateSelectionView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "isoFormatter.string(from: date)">
-            </PersistentString>
-            <PersistentString
-               value = "selectedDay">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #2 in closure #2 in closure #1 in SettingView.pickers.getter:SettingView.swift">
-      </ContextState>
-      <ContextState
          contextName = "closure #1 in closure #2 in closure #1 in ContentView.body.getter:ContentView.swift">
          <PersistentStrings>
             <PersistentString
@@ -28,13 +14,10 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
+         contextName = "ImmichService.getMyUser():ImmichService.swift">
          <PersistentStrings>
             <PersistentString
-               value = "URL(string: value)?.scheme">
-            </PersistentString>
-            <PersistentString
-               value = "!fileManager.fileExists(atPath: url.path)">
+               value = "entitlementManager.demo">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -42,12 +25,7 @@
          contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
       </ContextState>
       <ContextState
-         contextName = "ImmichService.getMyUser():ImmichService.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "entitlementManager.demo">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "closure #2 in closure #2 in closure #1 in SettingView.pickers.getter:SettingView.swift">
       </ContextState>
       <ContextState
          contextName = "closure #3 in closure #1 in SettingView.pickers.getter:SettingView.swift">
@@ -58,7 +36,54 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "ImmichService.loadSettings():ImmichService.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "UserDefaults.standard.string(forKey: &quot;timeinterval&quot;)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #3 in closure #1 in ContentView.body.getter:ContentView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "(error as NSError).userInfo">
+            </PersistentString>
+            <PersistentString
+               value = "(error as NSError).code">
+            </PersistentString>
+            <PersistentString
+               value = "error is NSURLErrorDomain">
+            </PersistentString>
+            <PersistentString
+               value = "(error as NSError).domain">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #2 in closure #1 in closure #1 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "width / g.size.width">
+            </PersistentString>
+            <PersistentString
+               value = "offsetStepX">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "closure #1 in closure #1 in closure #1 in SettingView.body.getter:SettingView.swift">
+      </ContextState>
+      <ContextState
+         contextName = "DateSelectionView.formattedDate.getter:DateSelectionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "isoFormatter.string(from: date)">
+            </PersistentString>
+            <PersistentString
+               value = "selectedDay">
+            </PersistentString>
+         </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "SlideshowView.init(albumName:id:query:):SlideshowView.swift">
@@ -72,21 +97,13 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "ImmichService.loadSettings():ImmichService.swift">
+         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
          <PersistentStrings>
             <PersistentString
-               value = "UserDefaults.standard.string(forKey: &quot;timeinterval&quot;)">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #2 in closure #1 in closure #1 in SlideshowView.body.getter:SlideshowView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "width / g.size.width">
+               value = "URL(string: value)?.scheme">
             </PersistentString>
             <PersistentString
-               value = "offsetStepX">
+               value = "!fileManager.fileExists(atPath: url.path)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

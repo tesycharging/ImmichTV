@@ -6,10 +6,15 @@
 //
 
 import SwiftUI
+import Foundation
 import Combine
 import AVKit
 import AVFoundation
 import UIKit
+#if os(tvOS)
+    #else
+import Photos
+#endif
 
 struct SlideshowView: View {
     @EnvironmentObject private var immichService: ImmichService
@@ -64,8 +69,11 @@ struct SlideshowView: View {
 #if os(tvOS)
     #else
     @State private var lastScale: CGFloat = 1.0
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var isSaving = false
     #endif
-      
+    @State private var downloading = false
     
     init(albumName: String? = nil, index: Int? = nil, query: Query? = nil) {
         self.albumName = albumName
@@ -271,12 +279,43 @@ struct SlideshowView: View {
                             Image(systemName: "plus.magnifyingglass")
                         }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "zoom"))
                             .focused($focusedButton, equals: "zoom")
+#if os(tvOS)
+#else
+#if targetEnvironment(macCatalyst)
+                        #else
+                        Button(action: {
+                            Task { @MainActor in
+                                do {
+                                    downloading = true
+                                    if immichService.assetItems[currentIndex].type == .image {
+                                        alertMessage = try await immichService.downloadImage(currentIndex: currentIndex)
+                                    } else {
+                                        alertMessage = try await immichService.downloadVideo(currentIndex: currentIndex)
+                                    }
+                                } catch {
+                                    alertMessage = error.localizedDescription
+                                }
+                                downloading = false
+                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2) {
+                                    showAlert = true
+                                }
+                            }
+                        }) {
+                            Image(systemName: "arrow.down.app")
+                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == "downdload"))
+                            .focused($focusedButton, equals: "downdload")
+                            .alert(isPresented: $showAlert) {
+                                Alert(title: Text("Save Image"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+                            }
+                        #endif
+                        #endif
                     }.padding()
                         .background(Color.black.opacity(0.5)) // Transparent background
                         .cornerRadius(15)
                         .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
                         .zIndex(1) // Ensure bar is above image
                         .padding(.top, 20)
+                        .progressView(isPresented: $downloading, message: "downloading")
                     HStack {
                         if exifInfo != nil {
                             exifInfoView(exifInfo: exifInfo!)
@@ -342,32 +381,6 @@ struct SlideshowView: View {
     }
      
 #if os(tvOS)
-    /*private func zoomOffset(direction: MoveCommandDirection, slideSize: CGSize) {
-        let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
-        switch direction {
-        case .left:
-            offsetStepX = offsetStepX == maxOffsetStep ? maxOffsetStep : offsetStepX + 1
-        case .right:
-            offsetStepX = offsetStepX == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepX - 1
-        case .up:
-            offsetStepY = offsetStepY == maxOffsetStep ? maxOffsetStep : offsetStepY + 1
-        case .down:
-            offsetStepY = offsetStepY == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepY - 1
-        @unknown default:
-            break
-        }
-        focusedButton = "zoomout"
-        let newOffset = CGSize(
-            width: offset.width + offsetStepX * slideSize.width / maxScale,
-            height: offset.height + offsetStepY * slideSize.height / maxScale
-        )
-        offset = newOffset
-        print("x: \(offsetStepX), y: \(offsetStepY)")
-        print(offset)
-        //clampOffset(for: zoomScale)
-        print(offset)
-    }*/
-    
     private func zoomOffset(direction: MoveCommandDirection, slideSize: CGSize) {
         let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
         let isPortrait = imageSize.height > imageSize.width
@@ -606,28 +619,6 @@ struct SlideshowView: View {
                                         }
                                     }
                              )
-                             .onTapGesture(count: 1) {
-                                 if zoomScale == minScale {
-                                     withAnimation {
-                                         if isBarVisible {
-                                             isBarVisible = false
-                                             timerSubscription?.cancel()
-                                             timerSubscription = nil
-                                         } else {
-                                             showToolbar()
-                                         }
-                                     }
-                                 }
-                             }
-                             .gesture(
-                                LongPressGesture(minimumDuration: 1)
-                                    .onEnded { _ in
-                                    withAnimation {
-                                        UIApplication.shared.isIdleTimerDisabled = false
-                                        dismiss()
-                                    }
-                                }
-                             )
 #endif
                              .overlay() {
                                  albumTitle
@@ -682,6 +673,52 @@ struct SlideshowView: View {
          }
         #else
          .offset(x: swipeOffset) // Moves the text based on swipe
+         .onTapGesture(count: 1) {
+             if zoomScale == minScale {
+                 withAnimation {
+                     if isBarVisible {
+                         isBarVisible = false
+                         timerSubscription?.cancel()
+                         timerSubscription = nil
+                     } else {
+                         showToolbar()
+                     }
+                 }
+             }
+         }
+         .gesture(
+            LongPressGesture(minimumDuration: 1)
+                .onEnded { _ in
+                withAnimation {
+                    UIApplication.shared.isIdleTimerDisabled = false
+                    dismiss()
+                }
+            }
+         )
+         .gesture(
+            DragGesture()
+            .onChanged { value in
+                // Update offset while dragging
+                swipeOffset = value.translation.width
+            }
+            .onEnded { value in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    // Determine swipe direction based on final position
+                    if value.translation.width > 50 {
+                        self.goToPreviousItem()
+                        withAnimation {
+                            swipeOffset = 100 // Move right
+                        }
+                    } else if value.translation.width < -50 {
+                        self.goToNextItem()
+                        withAnimation {
+                            swipeOffset = -100 // Move left
+                        }
+                    }
+                    swipeOffset = 0
+                }
+            }
+         )
          #endif
          .background(Color.black)
          .onAppear {
@@ -812,19 +849,19 @@ struct SlideshowView: View {
     }
     
     // Start the timer
-      private func showToolbar() {
-          timerSubscription?.cancel()
-          timerSubscription = nil
-          isBarVisible = true
-          timerSubscription = Timer.publish(every: 10.0, on: .main, in: .common)
-              .autoconnect()
-              .sink { _ in
-                  self.isBarVisible = false
-                  showAlbumName = false
-                  timerSubscription?.cancel()
-                  timerSubscription = nil
-              }
-      }
+  private func showToolbar() {
+      timerSubscription?.cancel()
+      timerSubscription = nil
+      isBarVisible = true
+      timerSubscription = Timer.publish(every: 10.0, on: .main, in: .common)
+          .autoconnect()
+          .sink { _ in
+              self.isBarVisible = false
+              showAlbumName = false
+              timerSubscription?.cancel()
+              timerSubscription = nil
+          }
+  }
 }
 
 class PlayerViewModel: ObservableObject {
@@ -847,6 +884,36 @@ class PlayerViewModel: ObservableObject {
 extension AVPlayer {
     var isPlaying: Bool {
         return rate != 0 && error == nil
+    }
+}
+
+extension View {
+    func progressView(
+        isPresented: Binding<Bool>,
+        message: String
+    ) -> some View {
+        fullScreenCover(isPresented: isPresented) {
+            VStack {
+                ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1.5) // Optional: Adjust size
+                    .tint(Color.primary)
+                Text("\(message)").multilineTextAlignment(.center)
+                
+            }.padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.secondary)
+                .cornerRadius(35)
+                .padding()
+                .transition(.slide)
+            .presentationBackground(.clear)
+        }.transaction { transaction in
+            if isPresented.wrappedValue {
+                // disable the default FullScreenCover animation
+                transaction.disablesAnimations = true
+                
+                // add custom animation for presenting and dismissing the FullScreenCover
+                transaction.animation = .linear(duration: 0.1)
+            }
+        }
     }
 }
 

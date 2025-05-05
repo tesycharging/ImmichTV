@@ -6,6 +6,11 @@
 //
 
 import Foundation
+#if os(tvOS)
+#else
+import Photos
+import UIKit
+#endif
 
 class ImmichService: ObservableObject {
     private var entitlementManager: EntitlementManager
@@ -319,3 +324,180 @@ extension ImmichService {
         }
     }
 }
+
+#if os(tvOS)
+#else
+public enum DownloadError: Error {
+    case downloadError(msg: String)
+    
+    public var localizedDescription: String {
+        switch self {
+        case .downloadError(let msg): return "\(msg)"
+        }
+    }
+}
+
+extension ImmichService {
+    // Find or create the album
+    private func setupAlbum(albumName: String = "ImmichTV") async throws -> PHAssetCollection {
+        return try await withCheckedThrowingContinuation { continuation in
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.predicate = NSPredicate(format: "title = %@", albumName)
+            let collection = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: fetchOptions)
+            
+            if let album = collection.firstObject {
+                continuation.resume(returning: album)
+            } else {
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: albumName)
+                }) { success, error in
+                    if success {
+                        let newCollection = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: fetchOptions)
+                        continuation.resume(returning: newCollection.firstObject!)
+                    } else if let error = error {
+                        continuation.resume(throwing: DownloadError.downloadError(msg: "Error creating album: \(error)"))
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    @MainActor
+    func downloadImage(currentIndex: Int) async throws -> String {
+        // Ensure Photos permission
+        try await requestPhotoLibraryPermission()
+        // Get image URL
+        guard let imageURL = getImageUrl(id: assetItems[currentIndex].id, thumbnail: false) else {
+            throw DownloadError.downloadError(msg: "Invalid URL")
+        }
+        
+        // Download image
+        let (data, response) = try await Foundation.URLSession.shared.data(from: imageURL)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw DownloadError.downloadError(msg: "Invalid server response")
+        }
+        
+        guard let uiImage = UIImage(data: data) else {
+            throw DownloadError.downloadError(msg: "Failed to create image from data")
+        }
+        
+        let album = try await setupAlbum()
+        
+        // Save to Photos
+        return try await withCheckedThrowingContinuation { continuation in
+            PHPhotoLibrary.shared().performChanges({
+                // Set up options with the desired filename
+                let options = PHAssetResourceCreationOptions()
+                options.originalFilename = self.assetItems[currentIndex].originalFileName
+                
+                let creationRequest = PHAssetCreationRequest.forAsset()
+                creationRequest.addResource(with: .photo, data: uiImage.jpegData(compressionQuality: 1.0)!, options: nil)
+                
+                // Add asset to album
+                if let asset = creationRequest.placeholderForCreatedAsset {
+                    let albumChangeRequest = PHAssetCollectionChangeRequest(for: album)
+                    albumChangeRequest?.addAssets([asset] as NSArray)
+                }
+            }) { success, error in
+                if success {
+                    continuation.resume(returning: "Image saved successfully!")
+                } else {
+                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to save image: \(error?.localizedDescription ?? "Unknown error")"))
+                }
+            }
+        }
+    }
+    
+    func downloadVideo(currentIndex: Int) async throws -> String {
+        // Ensure Photos permission
+        try await requestPhotoLibraryPermission()
+        // Get video URL
+        guard let videoURL = getVideoUrl(id: assetItems[currentIndex].id) else {
+            throw DownloadError.downloadError(msg: "Invalid URL")
+        }
+        
+        // Download video
+        let tempURL = try await downloadToTemp(videoURL: videoURL, filename: assetItems[currentIndex].originalFileName)
+        
+        let album = try await setupAlbum()
+        
+        return try await saveVideo(tempURL: tempURL, album: album)
+    }
+    
+    private func downloadToTemp(videoURL: URL, filename: String) async throws -> URL {
+        return try await withCheckedThrowingContinuation { continuation in
+            let task = URLSession.shared.downloadTask(with: videoURL) { tempURL, response, error in
+                guard let tempURL = tempURL else {
+                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to download video"))
+                    return
+                }
+                
+                // Verify the file exists
+                guard FileManager.default.fileExists(atPath: tempURL.path) else {
+                    continuation.resume(throwing: DownloadError.downloadError(msg: "Downloaded file does not exist at \(tempURL.path)"))
+                    return
+                }
+
+                // Copy the file to a stable temporary location to prevent deletion
+                let stableURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+                do {
+                    try FileManager.default.copyItem(at: tempURL, to: stableURL)
+                    continuation.resume(returning: stableURL)
+                } catch {
+                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to copy file: \(error)"))
+                }
+            }
+            // Start the download task
+            task.resume()
+        }
+    }
+    
+    private func saveVideo(tempURL: URL, album: PHAssetCollection) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            PHPhotoLibrary.shared().performChanges({
+                let creationRequest = PHAssetCreationRequest.forAsset()
+                creationRequest.addResource(with: .video, fileURL: tempURL, options: nil)
+                
+                // Add asset to album
+                if let asset = creationRequest.placeholderForCreatedAsset {
+                    let albumChangeRequest = PHAssetCollectionChangeRequest(for: album)
+                    albumChangeRequest?.addAssets([asset] as NSArray)
+                }
+            }) { success, error in
+                if success {
+                    continuation.resume(returning: "Video saved successfully!")
+                } else {
+                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to save video: \(error?.localizedDescription ?? "Unknown error")"))
+                }
+                // Clean up temporary file
+                try? FileManager.default.removeItem(at: tempURL)
+            }
+        }
+    }
+    
+    // Helper function to request Photos permission
+    @MainActor
+    func requestPhotoLibraryPermission() async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                DispatchQueue.main.async {
+                    switch status {
+                    case .authorized, .limited:
+                        continuation.resume()
+                    case .denied, .restricted:
+                        continuation.resume(throwing: DownloadError.downloadError(msg: "Photo library permission denied"))
+                    case .notDetermined:
+                        continuation.resume(throwing: DownloadError.downloadError(msg: "Photo library access not determined"))
+                    @unknown default:
+                        continuation.resume(throwing: DownloadError.downloadError(msg: "Unknown authorization status"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+#endif
