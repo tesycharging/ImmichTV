@@ -10,6 +10,7 @@
 		630F3C062D888B520068BEF1 /* ImmichTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		63380B142D98B06D004C816D /* ImmichShow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ImmichShow.entitlements; sourceTree = "<group>"; };
 		63B1CA3D2D9452C80083C2F4 /* ImmichShow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImmichShow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		63FDAF552DE6D136003CBCCC /* Readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Readme.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,6 +84,7 @@
 		630F3BFD2D888B520068BEF1 = {
 			isa = PBXGroup;
 			children = (
+				63FDAF552DE6D136003CBCCC /* Readme.md */,
 				63380B142D98B06D004C816D /* ImmichShow.entitlements */,
 				630F3C082D888B520068BEF1 /* ImmichTV */,
 				6302FC492DAC586400E3E370 /* Frameworks */,
