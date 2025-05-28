@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://github.com/tesycharging/ImmichTV">
-    <img src="/ImmichTV/Assets.xcassets/App Icon & Top Shelf Image.brandassets/App Icon - App Store.imagestack/AppIconSmall.imagestacklayer/AppIconSmall.png" width="240" height="auto" alt="Immich TV logo" />
+    <img src="/ImmichTV/Assets.xcassets/App%20Icon%20%26%20Top%20Shelf%20Image.brandassets/App%20Icon.imagestack/AppIconSmall.imagestacklayer/Content.imageset/AppIconSmall.png" width="240" height="auto" alt="Immich TV logo" />
   </a>
 </div>
 <br />
