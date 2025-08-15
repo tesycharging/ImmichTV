@@ -28,7 +28,6 @@ struct ContentView: View {
     @Environment(\.requestReview) private var requestReview
     #endif
     @FocusState private var focusedButton: String? // Track which button is focused
-    @State var user = ""
     @State var error = false
     @State var errorMessage = ""
     @State var isLoading = true
@@ -52,44 +51,87 @@ struct ContentView: View {
         }
         return UIImage(systemName: "xmark.circle") ?? UIImage()
     }
+    
+    func requestAlbums() async {
+        do {
+            try await immichService.getMyUser()
+            try await immichService.fetchAlbums()
+            error = false
+            isLoading = false
+        } catch {
+            self.error = true
+            if (error as NSError).domain == "NSURLErrorDomain" {
+                errorMessage = "\((error as NSError).code) \((error as NSError).domain)"
+            } else {
+                errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
+            }
+            immichService.albumsGrouped.removeAll()
+            immichService.user = User(name: "", email: "")
+            focusedButton = "settings"
+            isLoading = false
+        }
+    }
+    
+    func threeStateButton() -> some View {
+        Button(action: {
+            // Cycle to the next state
+            immichService.state = immichService.state.nextState
+            Task { @MainActor in
+                await requestAlbums()
+            }
+        }) {
+            Image(systemName: immichService.state.iconForState)
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             Group {
                 if isLoading {
                     ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                } else if error {
-                    Text(errorMessage).font(.caption)
-                        .onTapGesture {
-                            navigationPath.append(NavigationDestination.settings)
-                        }
-                } else if immichService.albumsGrouped.isEmpty {
-                    Text("no albums").font(.caption)
                 } else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        #if os(tvOS)
-                        if showReviewPrompt {
-                            VStack {
-                                Text("Enjoying the app? Leave us a review!")
-                                    .font(.caption)
-                                HStack {
-                                    Image(uiImage: generateQRCode(from: entitlementManager.reviewURL)).resizable().scaledToFit().frame(width: 100, height: 100)
-                                    Button("Not Now") {
-                                        showReviewPrompt = false
-                                    }
-                                    .buttonStyle(.bordered).font(.caption)
-                                }
+                    if error {
+                        Text(errorMessage).font(.caption)
+                            .onTapGesture {
+                                navigationPath.append(NavigationDestination.settings)
                             }
-                            .padding()
-                            .background(Color.secondary)
-                            .cornerRadius(10)
-                            .shadow(radius: 5)
-                        }
-                        #endif
-                        AssetsView(showAlbums: true, ascending: .constant(false))
-                    }.navigationTitle("Immich Albums \(user == "" ? "" : "of \(user)")")
+                    } else if immichService.albumsGrouped.isEmpty {
+                        Text("no albums").font(.caption)
+                    } else {
+                        ScrollView(.vertical, showsIndicators: false) {
+#if os(tvOS)
+                            if showReviewPrompt {
+                                VStack {
+                                    Text("Enjoying the app? Leave us a review!")
+                                        .font(.caption)
+                                    HStack {
+                                        Image(uiImage: generateQRCode(from: entitlementManager.reviewURL)).resizable().scaledToFit().frame(width: 100, height: 100)
+                                        Button("Not Now") {
+                                            showReviewPrompt = false
+                                        }
+                                        .buttonStyle(.bordered).font(.caption)
+                                    }
+                                }
+                                .padding()
+                                .background(Color.secondary)
+                                .cornerRadius(10)
+                                .shadow(radius: 5)
+                            }
+#endif
+                            AssetsView(showAlbums: true, ascending: .constant(false))
+                        }.navigationTitle("Immich Albums \(immichService.user.name == "" ? "" : "of \(immichService.user.name)")")
+                    }
                 }
             }.toolbar {
+                ToolbarItem(placement: .navigation) {
+#if targetEnvironment(macCatalyst)
+                    threeStateButton().buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "threeState"))
+                        .focused($focusedButton, equals: "threeState")
+                    #else
+                    threeStateButton().buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "threeState"))
+                        .focused($focusedButton, equals: "threeState")
+                    #endif
+                }
                 ToolbarItem(placement: .navigation) {
 #if targetEnvironment(macCatalyst)
                     Button( action: {
@@ -159,29 +201,13 @@ struct ContentView: View {
                         isLoading = true
                         immichService.albumsGrouped.removeAll()
                         if entitlementManager.notConfigured {
-                            user = ""
+                            immichService.user = User(name: "", email: "")
                             focusedButton = "settings"
                             self.error = true
                             errorMessage = "not configured yet"
                             isLoading = false
                         } else {
-                            do {
-                                user = try await immichService.getMyUser()
-                                try await immichService.fetchAlbums()
-                                error = false
-                                isLoading = false
-                            } catch {
-                                self.error = true
-                                if (error as NSError).domain == "NSURLErrorDomain" {
-                                    errorMessage = "\((error as NSError).code) \((error as NSError).domain)"
-                                } else {
-                                    errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
-                                }
-                                immichService.albumsGrouped.removeAll()
-                                user = ""
-                                focusedButton = "settings"
-                                isLoading = false
-                            }
+                            await requestAlbums()
                         }
                     //}
                     entitlementManager.processCompletedCount += 1
@@ -359,4 +385,28 @@ extension View {
     func immichTVTestFieldStyle(isFocused: Bool) -> some View {
         self.modifier(ImmichTVTextFieldStyle(isFocused: isFocused))
     }
+}
+
+enum ToggleState: String, CaseIterable {
+    case all = "All"
+    case owned = "Owned"
+    case shared = "Shared"
+    
+    var nextState: ToggleState {
+        let allStates = ToggleState.allCases
+        let currentIndex = allStates.firstIndex(of: self)!
+        let nextIndex = (currentIndex + 1) % allStates.count
+        return allStates[nextIndex]
+    }
+    
+    var iconForState: String {
+       switch self {
+       case .all:
+           return "person.2.fill"
+       case .owned:
+           return "person.fill"
+       case .shared:
+           return "sharedwithyou"
+       }
+   }
 }

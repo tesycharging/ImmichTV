@@ -11,9 +11,18 @@ struct Album: Hashable, Identifiable, Codable {
     let albumName: String
     let description: String
     let albumThumbnailAssetId: String
+    let albumUsers: [AlbumUser]
     let id: String
     let startDate: String
     let endDate: String
+    
+    static func == (lhs: Album, rhs: Album) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 struct Asset: Identifiable, Codable {
@@ -22,6 +31,10 @@ struct Asset: Identifiable, Codable {
     let assets: [AssetItem]
 }
 
+struct AlbumUser: Codable {
+    let role: String
+    let user: User
+}
 
 
 // Top-level search response
@@ -95,9 +108,13 @@ struct ExifInfo: Codable, Hashable {
 }
 
 
-struct User: Codable {
+struct User: Codable, Equatable {
     let name: String
     let email: String
+    
+    static func == (lhs: User, rhs: User) -> Bool {
+        return lhs.name == rhs.name && lhs.email == rhs.email
+    }
 }
 
 struct Storage: Codable {

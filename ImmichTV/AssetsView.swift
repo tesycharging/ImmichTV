@@ -98,14 +98,14 @@ struct AssetsView: View {
                                         }
                                     }){
                                         AssetCard(id: album.albumThumbnailAssetId).overlay(alignment: .bottom){
-                                            Text(album.albumName).font(.subheadline).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
+                                            AlbumTitle(album: album, user: immichService.user).font(.subheadline).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
                                         }
                                     }.buttonStyle(ImmichTVTaleStyle(isFocused: focusedButton == album.id))
                                         .focused($focusedButton, equals: album.id)
                                     #else
                                     NavigationLink(value: NavigationDestination.album(albumId: album.id, albumName: album.albumName)) {
                                         AssetCard(id: album.albumThumbnailAssetId).overlay(alignment: .bottom){
-                                            Text(album.albumName).font(.subheadline).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
+                                            AlbumTitle(album: album, user: immichService.user).font(.subheadline).background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
                                         }
                                     }.buttonStyle(ImmichTVTaleStyle(isFocused: focusedButton == album.id))
                                         .focused($focusedButton, equals: album.id)
@@ -178,6 +178,22 @@ struct AssetsView: View {
                 SlideshowView(albumName: albumName, index: immichService.assetItems.firstIndex(where: { $0.id == itemId }), query: query).environmentObject(immichService).environmentObject(entitlementManager)
             }
         #endif
+    }
+}
+
+struct AlbumTitle: View {
+    let album: Album
+    let user: User
+    
+    var body: some View {
+        HStack {
+            if !album.albumUsers.isEmpty && album.albumUsers.contains(where: { $0.user == user }){
+                Text(album.albumName)
+                Image(systemName: "sharedwithyou")
+            } else {
+                Text(album.albumName)
+            }
+        }
     }
 }
 

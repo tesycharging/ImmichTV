@@ -17,6 +17,8 @@ class ImmichService: ObservableObject {
     @Published var albumsGrouped: [Date: [Album]] = [:]
     @Published var assetItems: [AssetItem] = []
     @Published var assetItemsGrouped: [Date: [AssetItem]] = [:]
+    @Published var user: User = User(name: "", email: "")
+    @Published var state: ToggleState = .all
     
     init(entitlementManager: EntitlementManager) {
         self.entitlementManager = entitlementManager
@@ -44,20 +46,50 @@ class ImmichService: ObservableObject {
         return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key > $1.key })
     }
     
+    private func getAllAlbums(shared: Bool) async throws -> [Album] {
+        guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums?apiKey=\(entitlementManager.apiKey)&shared=\(shared)") else {
+            throw NSError(domain: "url doesn't work", code: 100)
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        if data.count == 2 {
+            return []
+        } else {
+            return try decoder(data)
+        }
+    }
+    
     @MainActor
     func fetchAlbums() async throws {
         if entitlementManager.demo {
-            try? await Task.sleep(nanoseconds: UInt64(2 * 1000000000)) // Convert seconds to nanoseconds
-            albumsGrouped = groupAlbums(albums: [Album(albumName: "Beaches", description: "", albumThumbnailAssetId: "1_thumb.jpg", id: "1", startDate: "2009-08-08T10:14:13.000Z", endDate: "2015-08-06T17:46:11.000Z"), Album(albumName: "Cars", description: "", albumThumbnailAssetId: "11_thumb.jpg", id: "2", startDate: "2011-02-14T14:09:47.230Z", endDate: "2017-05-02T11:08:34.740Z")])
-        } else {
-            guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums?apiKey=\(entitlementManager.apiKey)") else {
-                throw NSError(domain: "url doesn't work", code: 100)
+            if state == .shared {
+                albumsGrouped = [:]
+            } else {
+                try? await Task.sleep(nanoseconds: UInt64(2 * 1000000000)) // Convert seconds to nanoseconds
+                albumsGrouped = groupAlbums(albums: [Album(albumName: "Beaches", description: "", albumThumbnailAssetId: "1_thumb.jpg", albumUsers: [], id: "1", startDate: "2009-08-08T10:14:13.000Z", endDate: "2015-08-06T17:46:11.000Z"), Album(albumName: "Cars", description: "", albumThumbnailAssetId: "11_thumb.jpg", albumUsers: [], id: "2", startDate: "2011-02-14T14:09:47.230Z", endDate: "2017-05-02T11:08:34.740Z")])
             }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if data.count == 2 {
+        } else {
+            var albums:[Album] = []
+            var albumsShared:[Album] = []
+            if state == .shared {
+                albumsShared = try await getAllAlbums(shared: true)
+            } else {
+                albums = try await getAllAlbums(shared: false)
+                albumsShared = try await getAllAlbums(shared: true)
+            }
+            if albums.isEmpty && albumsShared.isEmpty {
                 throw NSError(domain: "no albums found", code: 100)
             }
-            albumsGrouped = groupAlbums(albums: try decoder(data))
+            var resultAlbums: [Album] = []
+            switch state {
+            case .all:
+                resultAlbums = [albums, albumsShared].flatMap { $0 }
+            case .owned:
+                let mergedAlbums = [albums, albumsShared].flatMap { $0 }
+                resultAlbums = mergedAlbums.filter{ !$0.albumUsers.contains(where: { $0.user == user })}
+            case .shared:
+                resultAlbums = albumsShared.filter{ $0.albumUsers.contains(where: { $0.user == user })}
+            }
+            albumsGrouped = groupAlbums(albums: resultAlbums)
         }
     }
     
@@ -221,17 +253,17 @@ class ImmichService: ObservableObject {
         return try decoder(data)
     }
     
-    func getMyUser() async throws -> String {
+    @MainActor
+    func getMyUser() async throws {
         if entitlementManager.demo {
-            return "demo"
+            user = User(name: "demo", email: "demo@demo.com")
         } else {
             guard let url = URL(string: "\(entitlementManager.baseURL)/api/users/me?apiKey=\(entitlementManager.apiKey)") else {
                 throw NSError(domain: "url doesn't work", code: 100)
             }
             let (data, _) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            let user: User = try decoder(data)
-            return user.name
+            user = try decoder(data)
         }
     }
     

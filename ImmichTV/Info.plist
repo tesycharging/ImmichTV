@@ -2,32 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleVersion</key>
-	<string>1.0</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundleDisplayName</key>
-	<string>$(PRODUCT_NAME)</string>
-    <key>CFBundleAppStoreID</key>
-    <string>6743646520</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photo library to create an album.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>We need access to save photos.</string>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>NSDocumentsFolderUsageDescription</key>
-	<string>This app needs access to your files to select music.</string>
-	<key>UISupportsDocumentBrowser</key>
-	<true/>
+	<key>CFBundleAppStoreID</key>
+	<string>6743646520</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -35,5 +11,7 @@
 		<key>NSExceptionAllowsInsecureHTTPLoads</key>
 		<true/>
 	</dict>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 </dict>
 </plist>
