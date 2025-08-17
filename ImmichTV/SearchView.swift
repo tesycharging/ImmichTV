@@ -30,6 +30,7 @@ struct SearchView: View {
     @State private var detailSearch = false
     @State private var detailSearchUsed = false
     @State private var error = false
+    @State private var isLoading = true
     @State private var errorMessage = ""
     @State private var searchProgress = false
     #if targetEnvironment(macCatalyst)
@@ -110,9 +111,12 @@ struct SearchView: View {
                                             matches = immichService.assetItems.count
                                             currentPage = (query.page ?? 2) - 1
                                             error = false
-                                        } catch let error {
+                                        } catch let apiError as APIError {
                                             self.error = true
-                                            errorMessage = error.localizedDescription
+                                            errorMessage = apiError.localizedDescription
+                                        } catch {
+                                            self.error = true
+                                            errorMessage = "Failed to fetch pictures: \(error.localizedDescription)"
                                         }
                                         searchProgress = false
                                     }
@@ -161,9 +165,12 @@ struct SearchView: View {
                                             matches = immichService.assetItems.count
                                             currentPage = (query.page ?? 2) - 1
                                             error = false
-                                        } catch let error {
+                                        } catch let apiError as APIError {
                                             self.error = true
-                                            errorMessage = error.localizedDescription
+                                            errorMessage = apiError.localizedDescription
+                                        } catch {
+                                            self.error = true
+                                            errorMessage = "Failed to fetch pictures: \(error.localizedDescription)"
                                         }
                                         searchProgress = false
                                     }
@@ -180,9 +187,12 @@ struct SearchView: View {
                                             matches = immichService.assetItems.count
                                             currentPage = (query.page ?? 2) - 1
                                             error = false
-                                        } catch let error {
+                                        } catch let apiError as APIError {
                                             self.error = true
-                                            errorMessage = error.localizedDescription
+                                            errorMessage = apiError.localizedDescription
+                                        } catch {
+                                            self.error = true
+                                            errorMessage = "Failed to fetch pictures: \(error.localizedDescription)"
                                         }
                                         searchProgress = false
                                     }

@@ -109,6 +109,7 @@ struct ExifInfo: Codable, Hashable {
 
 
 struct User: Codable, Equatable {
+    let id: String
     let name: String
     let email: String
     
@@ -149,8 +150,13 @@ struct APIKeyResponse: Codable {
     let name: String
 }
 
-struct ErrorMessage: Codable {
+struct ErrorMessage: Codable, Error {
     let message: String
     let error: String
     let statusCode: Int
+    let correlationId: String
+    
+    var description: String {
+        "\(error): \(message), statusCode: \(statusCode)"
+    }
 }

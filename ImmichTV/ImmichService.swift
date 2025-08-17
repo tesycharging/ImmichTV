@@ -17,7 +17,7 @@ class ImmichService: ObservableObject {
     @Published var albumsGrouped: [Date: [Album]] = [:]
     @Published var assetItems: [AssetItem] = []
     @Published var assetItemsGrouped: [Date: [AssetItem]] = [:]
-    @Published var user: User = User(name: "", email: "")
+    @Published var user: User = User(id: "", name: "", email: "")
     @Published var state: ToggleState = .all
     
     init(entitlementManager: EntitlementManager) {
@@ -50,12 +50,8 @@ class ImmichService: ObservableObject {
         guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums?apiKey=\(entitlementManager.apiKey)&shared=\(shared)") else {
             throw NSError(domain: "url doesn't work", code: 100)
         }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        if data.count == 2 {
-            return []
-        } else {
-            return try decoder(data)
-        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        return try decoder(data, response: response)
     }
     
     @MainActor
@@ -77,7 +73,7 @@ class ImmichService: ObservableObject {
                 albumsShared = try await getAllAlbums(shared: true)
             }
             if albums.isEmpty && albumsShared.isEmpty {
-                throw NSError(domain: "no albums found", code: 100)
+                albumsGrouped = [:]
             }
             var resultAlbums: [Album] = []
             switch state {
@@ -158,11 +154,12 @@ class ImmichService: ObservableObject {
             }
         } else {
             guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums/\(albumId)?apiKey=\(entitlementManager.apiKey)") else {
-                throw NSError(domain: "url doesn't work", code: 100)
+                throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
             }
-            let (data, _) = try await URLSession.shared.data(from: url)
+            
+            let (data, response) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            let asset: Asset = try decoder(data)
+            let asset: Asset = try decoder(data, response: response)
             if ascending {
                 assetItems = asset.assets.reversed()
             } else {
@@ -176,7 +173,7 @@ class ImmichService: ObservableObject {
     
     func getImageUrl(id: String, thumbnail: Bool = true, video: Bool = false) -> URL? {
         if entitlementManager.demo {
-            return URL(string: "\(entitlementManager.baseURL)/api/assets/\(id)")
+            return URL(string: "\(entitlementManager.baseURL)/api/assets/\(id)?apiKey=\(entitlementManager.apiKey)")
         } else {
             if thumbnail || video {
                 return URL(string: "\(entitlementManager.baseURL)/api/assets/\(id)/thumbnail/?apiKey=\(entitlementManager.apiKey)")
@@ -247,23 +244,23 @@ class ImmichService: ObservableObject {
     
     func getAsset(id: String) async throws -> AssetItem {
         guard let url = URL(string: "\(entitlementManager.baseURL)/api/assets/\(id)?apiKey=\(entitlementManager.apiKey)") else {
-            throw NSError(domain: "url doesn't work", code: 100)
+            throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
         }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try decoder(data)
+        let (data, response) = try await URLSession.shared.data(from: url)
+        return try decoder(data, response: response)
     }
     
     @MainActor
     func getMyUser() async throws {
         if entitlementManager.demo {
-            user = User(name: "demo", email: "demo@demo.com")
+            user = User(id: "demo", name: "demo", email: "demo@demo.com")
         } else {
             guard let url = URL(string: "\(entitlementManager.baseURL)/api/users/me?apiKey=\(entitlementManager.apiKey)") else {
-                throw NSError(domain: "url doesn't work", code: 100)
+                throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
             }
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            user = try decoder(data)
+            user = try decoder(data, response: response)
         }
     }
     
@@ -272,16 +269,16 @@ class ImmichService: ObservableObject {
             return Storage(diskAvailable: "10.0 TiB", diskAvailableRaw: 10993775525888, diskSize: "10.5 TiB", diskSizeRaw: 11490240110592, diskUsagePercentage: 4.32, diskUse: "462.4 GiB", diskUseRaw: 496464584704)
         } else {
             guard let url = URL(string: "\(entitlementManager.baseURL)/api/server/storage?apiKey=\(entitlementManager.apiKey)") else {
-                throw NSError(domain: "url doesn't work", code: 100)
+                throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
             }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            return try decoder(data)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            return try decoder(data, response: response)
         }
     }
     
     func updateAssets(id: String, favorite: Bool) async throws -> AssetItem {
         guard let url = URL(string: "\(entitlementManager.baseURL)/api/assets/\(id)") else {
-            throw NSError(domain: "url doesn't work", code: 100)
+            throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -301,7 +298,7 @@ extension ImmichService {
     // Login function
     private func login(baseURL: String, email: String, password: String) async throws -> String {
         guard let url = URL(string: "\(baseURL)/api/auth/login") else {
-            throw NSError(domain: "url doesn't work", code: 100)
+            throw APIError.wrongURL(url: "\(baseURL)")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -314,8 +311,8 @@ extension ImmichService {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let loginResponse: LoginResponse = try decoder(data)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let loginResponse: LoginResponse = try decoder(data, response: response)
         return loginResponse.accessToken
     }
     
@@ -326,7 +323,7 @@ extension ImmichService {
         } else {
             let accessToken = try await login(baseURL: baseURL, email: email, password: password)
             guard let url = URL(string: "\(baseURL)/api/api-keys") else {
-                throw NSError(domain: "url doesn't work", code: 100)
+                throw APIError.wrongURL(url: "\(baseURL)")
             }
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
@@ -335,40 +332,53 @@ extension ImmichService {
             
             let body: [String: Any] = [
                 "name": "ImmichTV Generated Key",
-                "permissions": ["all"]
-            ]
+                "permissions": ["all", "album.read"]]
+                    
+                   /* ["all", "activity.create", "activity.read", "activity.update", "activity.delete", "activity.statistics", "apiKey.create", "apiKey.read", "apiKey.update", "apiKey.delete", "asset.read", "asset.update", "asset.delete", "asset.statistics", "asset.share", "asset.view", "asset.download", "asset.upload", "asset.replace", "album.create", "album.read", "album.update", "album.delete", "album.statistics", "album.share", "album.download", "albumAsset.create", "albumAsset.delete", "albumUser.create", "albumUser.update", "albumUser.delete", "auth.changePassword", "authDevice.delete", "archive.read", "duplicate.read", "duplicate.delete", "face.create", "face.read", "face.update", "face.delete", "job.create", "job.read", "library.create", "library.read", "library.update", "library.delete", "library.statistics", "timeline.read", "timeline.download", "memory.create", "memory.read", "memory.update", "memory.delete", "memory.statistics", "memoryAsset.create", "memoryAsset.delete", "notification.create", "notification.read", "notification.update", "notification.delete", "partner.create", "partner.read", "partner.update", "partner.delete", "person.create", "person.read", "person.update", "person.delete", "person.statistics", "person.merge", "person.reassign", "pinCode.create", "pinCode.update", "pinCode.delete", "server.about", "server.apkLinks", "server.storage", "server.statistics", "server.versionCheck", "serverLicense.read", "serverLicense.update", "serverLicense.delete", "session.create", "session.read", "session.update", "session.delete", "session.lock", "sharedLink.create", "sharedLink.read", "sharedLink.update", "sharedLink.delete", "stack.create", "stack.read", "stack.update", "stack.delete", "sync.stream", "syncCheckpoint.read", "syncCheckpoint.update", "syncCheckpoint.delete", "systemConfig.read", "systemConfig.update", "systemMetadata.read", "systemMetadata.update", "tag.create", "tag.read", "tag.update", "tag.delete", "tag.asset", "user.read", "user.update", "userLicense.create", "userLicense.read", "userLicense.update", "userLicense.delete", "userOnboarding.read", "userOnboarding.update", "userOnboarding.delete", "userPreference.read", "userPreference.update", "userProfileImage.create", "userProfileImage.read", "userProfileImage.update", "userProfileImage.delete", "adminUser.create", "adminUser.read", "adminUser.update", "adminUser.delete", "adminAuth.unlinkAll"]]*/
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (data, _) = try await URLSession.shared.data(for: request)
-            let apiKeyResponse: APIRequestResponse = try decoder(data)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let apiKeyResponse: APIRequestResponse = try decoder(data, response: response)
             return apiKeyResponse.apiKey.id
         }
     }
 }
 
 extension ImmichService {
-    func decoder<T: Decodable>(_ data: Data) throws -> T {
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            let failure = try JSONDecoder().decode(ErrorMessage.self, from: data)
-            throw NSError(domain: failure.error, code: failure.statusCode, userInfo: ["message":failure.message])
+    func decoder<T: Decodable>(_ data: Data, response: URLResponse = HTTPURLResponse(url: URL(string: "http")!, statusCode: 200, httpVersion: "", headerFields: [:])!) throws -> T {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.urlError(error: URLError(.badServerResponse))
         }
+        
+        var apiError = APIError.decoderError(msg: "")
+        do {
+            switch httpResponse.statusCode {
+            case 200, 201: return try JSONDecoder().decode(T.self, from: data)
+            default:
+                let errorMessage: ErrorMessage = try JSONDecoder().decode(ErrorMessage.self, from: data)
+                print(httpResponse.statusCode)
+                print(httpResponse.url!)
+                print(errorMessage.description)
+                apiError = APIError.requestERROR(error: errorMessage, url: httpResponse.url)
+            }
+        } catch {
+            print(httpResponse.statusCode)
+            print(httpResponse.url!)
+            if let utf8String = String(data: data, encoding: .utf8) {
+                print("\(utf8String)")
+                throw APIError.decoderError(msg: "\(utf8String)")
+            } else {
+                print(URLError(.badServerResponse))
+                throw APIError.urlError(error: URLError(.badServerResponse))
+                //throw error
+            }
+        }
+        throw apiError
     }
 }
 
 #if os(tvOS)
 #else
-public enum DownloadError: Error {
-    case downloadError(msg: String)
-    
-    public var localizedDescription: String {
-        switch self {
-        case .downloadError(let msg): return "\(msg)"
-        }
-    }
-}
-
 extension ImmichService {
     // Find or create the album
     private func setupAlbum(albumName: String = "ImmichTV") async throws -> PHAssetCollection {
@@ -387,7 +397,7 @@ extension ImmichService {
                         let newCollection = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: fetchOptions)
                         continuation.resume(returning: newCollection.firstObject!)
                     } else if let error = error {
-                        continuation.resume(throwing: DownloadError.downloadError(msg: "Error creating album: \(error)"))
+                        continuation.resume(throwing: APIError.downloadError(msg: "Error creating album: \(error)"))
                     }
                 }
             }
@@ -401,7 +411,7 @@ extension ImmichService {
         try await requestPhotoLibraryPermission()
         // Get image URL
         guard let imageURL = getImageUrl(id: assetItems[currentIndex].id, thumbnail: false) else {
-            throw DownloadError.downloadError(msg: "Invalid URL")
+            throw APIError.downloadError(msg: "Invalid URL")
         }
         
         // Download image
@@ -409,11 +419,11 @@ extension ImmichService {
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
-            throw DownloadError.downloadError(msg: "Invalid server response")
+            throw APIError.downloadError(msg: "Invalid server response")
         }
         
         guard let uiImage = UIImage(data: data) else {
-            throw DownloadError.downloadError(msg: "Failed to create image from data")
+            throw APIError.downloadError(msg: "Failed to create image from data")
         }
         
         let album = try await setupAlbum()
@@ -437,7 +447,7 @@ extension ImmichService {
                 if success {
                     continuation.resume(returning: "Image saved successfully!")
                 } else {
-                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to save image: \(error?.localizedDescription ?? "Unknown error")"))
+                    continuation.resume(throwing: APIError.downloadError(msg: "Failed to save image: \(error?.localizedDescription ?? "Unknown error")"))
                 }
             }
         }
@@ -448,7 +458,7 @@ extension ImmichService {
         try await requestPhotoLibraryPermission()
         // Get video URL
         guard let videoURL = getVideoUrl(id: assetItems[currentIndex].id) else {
-            throw DownloadError.downloadError(msg: "Invalid URL")
+            throw APIError.downloadError(msg: "Invalid URL")
         }
         
         // Download video
@@ -463,13 +473,13 @@ extension ImmichService {
         return try await withCheckedThrowingContinuation { continuation in
             let task = URLSession.shared.downloadTask(with: videoURL) { tempURL, response, error in
                 guard let tempURL = tempURL else {
-                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to download video"))
+                    continuation.resume(throwing: APIError.downloadError(msg: "Failed to download video"))
                     return
                 }
                 
                 // Verify the file exists
                 guard FileManager.default.fileExists(atPath: tempURL.path) else {
-                    continuation.resume(throwing: DownloadError.downloadError(msg: "Downloaded file does not exist at \(tempURL.path)"))
+                    continuation.resume(throwing: APIError.downloadError(msg: "Downloaded file does not exist at \(tempURL.path)"))
                     return
                 }
 
@@ -479,7 +489,7 @@ extension ImmichService {
                     try FileManager.default.copyItem(at: tempURL, to: stableURL)
                     continuation.resume(returning: stableURL)
                 } catch {
-                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to copy file: \(error)"))
+                    continuation.resume(throwing: APIError.downloadError(msg: "Failed to copy file: \(error)"))
                 }
             }
             // Start the download task
@@ -502,7 +512,7 @@ extension ImmichService {
                 if success {
                     continuation.resume(returning: "Video saved successfully!")
                 } else {
-                    continuation.resume(throwing: DownloadError.downloadError(msg: "Failed to save video: \(error?.localizedDescription ?? "Unknown error")"))
+                    continuation.resume(throwing: APIError.downloadError(msg: "Failed to save video: \(error?.localizedDescription ?? "Unknown error")"))
                 }
                 // Clean up temporary file
                 try? FileManager.default.removeItem(at: tempURL)
@@ -520,11 +530,11 @@ extension ImmichService {
                     case .authorized, .limited:
                         continuation.resume()
                     case .denied, .restricted:
-                        continuation.resume(throwing: DownloadError.downloadError(msg: "Photo library permission denied"))
+                        continuation.resume(throwing: APIError.downloadError(msg: "Photo library permission denied"))
                     case .notDetermined:
-                        continuation.resume(throwing: DownloadError.downloadError(msg: "Photo library access not determined"))
+                        continuation.resume(throwing: APIError.downloadError(msg: "Photo library access not determined"))
                     @unknown default:
-                        continuation.resume(throwing: DownloadError.downloadError(msg: "Unknown authorization status"))
+                        continuation.resume(throwing: APIError.downloadError(msg: "Unknown authorization status"))
                     }
                 }
             }
@@ -533,3 +543,25 @@ extension ImmichService {
 }
 
 #endif
+
+enum APIError: Error {
+    case decoderError(msg: String)
+    case requestERROR(error: ErrorMessage, url: URL?)
+    case urlError(error: URLError)
+    case wrongURL(url: String)
+    case downloadError(msg: String)
+    
+    public var description: String {
+        switch self {
+        case .decoderError(let msg): return "Error: \(msg)"
+        case .requestERROR(let error, let url): return "request: \(url ?? URL(string: "-")!)\n\(error.description)"
+        case .urlError(let error): return "Error: \(error.localizedDescription)"
+        case .wrongURL(let url): return "url doesn't work: \(url)"
+        case .downloadError(let msg): return "\(msg)"
+        }
+    }
+    
+    public var localizedDescription: String {
+        description
+    }
+}

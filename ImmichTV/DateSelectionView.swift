@@ -68,6 +68,10 @@ struct DateSelectionView: View {
     
     // Computed property for formatted selected date
     private var formattedDate: Date? {
+        if selectedDay == nil && selectedMonth == nil && selectedYear != nil {
+            selectedDay = 1
+            selectedMonth = 1
+        }
         if selectedDay == nil || selectedMonth == nil || selectedYear == nil {
             valid = false
             return nil

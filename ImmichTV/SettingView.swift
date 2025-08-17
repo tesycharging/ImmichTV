@@ -176,6 +176,8 @@ struct SettingView: View {
                                     do {
                                         apiKey = try await immichService.createAPIKey(baseURL: baseURL, email: username, password: password)
                                         message = ""
+                                    } catch let apiError as APIError {
+                                        message = apiError.localizedDescription
                                     } catch {
                                         message = "Error: \(error.localizedDescription)"
                                     }
@@ -189,6 +191,8 @@ struct SettingView: View {
                                     do {
                                         apiKey = try await immichService.createAPIKey(baseURL: baseURL, email: username, password: password)
                                         message = ""
+                                    } catch let apiError as APIError {
+                                        message = apiError.localizedDescription
                                     } catch {
                                         message = "Error: \(error.localizedDescription)"
                                     }

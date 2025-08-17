@@ -244,7 +244,7 @@ struct SlideshowView: View {
                 Spacer()
                 VStack(alignment: .trailing) {
                     HStack {
-                        if !entitlementManager.demo {
+                        if !entitlementManager.demo && (immichService.assetItems[currentIndex].ownerId == immichService.user.id){
                             Button(action: {
                                 showToolbar()
                                 Task {@MainActor in

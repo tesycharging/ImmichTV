@@ -10,15 +10,21 @@ import SwiftUI
 struct AlbumView: View {
     var albumId: String
     var albumName: String
-    @Binding var isLoading: Bool
+    var shared: Bool
     @EnvironmentObject private var immichService: ImmichService
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @FocusState private var focusedButton: String? // Track which button is focused
     @Environment(\.dismiss) private var dismiss
     @State private var ascending = false
+    @State private var error = false
+    @State private var errorMessage: String = "no picturesX"
+    @State private var isLoading = false
+    @State private var onAppear = true
     #if targetEnvironment(macCatalyst)
     @State private var showSlide = false
     @State private var slideActive = false
+    #else
+    @Binding var slideActive: Bool
     #endif
       
     var body: some View {
@@ -35,10 +41,43 @@ struct AlbumView: View {
             #endif
             VStack(alignment: .leading, spacing: 100) {
                 Spacer()
+                    .onAppear {
+                        error = false
+                        if !slideActive {
+                            immichService.assetItemsGrouped.removeAll()
+                            immichService.assetItems.removeAll()
+                            isLoading = true
+                            onAppear = false
+                            Task {
+                                do {
+                                    try Task.checkCancellation() // Throws if cancelled
+                                    try await immichService.fetchAssets(albumId: albumId)
+                                    isLoading = false
+                                } catch let apiError as APIError {
+                                    self.error = true
+                                    errorMessage = apiError.localizedDescription
+                                    isLoading = false
+                                } catch {
+                                    self.error = true
+                                    errorMessage = "Failed to fetch pictures: \(error.localizedDescription)"
+                                    isLoading = false
+                                }
+                            }
+                        }
+                    }
                 ScrollView(.vertical, showsIndicators: false) {
                     HStack {
                         VStack {
-                            Text("\(albumName)").font(.title)
+                            HStack {
+                                Text("\(albumName)").font(.title)
+                                if shared {
+                                    #if targetEnvironment(macCatalyst)
+                                    Image(systemName: "link")
+                                    #else
+                                    Image(systemName: "sharedwithyou")
+                                    #endif
+                                }
+                            }
                             if !immichService.assetItems.isEmpty {
                                 Text("\(immichService.assetItems.count) Assets").font(.footnote)
                             }
@@ -79,18 +118,14 @@ struct AlbumView: View {
                     }.padding()
                     //Text(album.albumName).font(.title).padding()
                     VStack(alignment: .leading, spacing: 0) {
-                        if immichService.assetItems.isEmpty {
-                            if isLoading {
-                                Spacer()
-                                ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
-                                Spacer()
-                            } else {
-                                Spacer()
-                                Text("No pictures found").font(.title)
-                                Spacer()
-                            }
+                        if isLoading {
+                            ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                        } else if error {
+                            Text(errorMessage).font(.caption)
+                        } else if immichService.assetItems.isEmpty && !onAppear {
+                            Text("no picture").font(.caption)
                         } else {
-                            AssetsView(albumName: albumName, ascending: $ascending).onAppear {
+                            AssetsView(albumName: albumName, shared: shared, ascending: $ascending).onAppear {
 #if os(tvOS)
                                 focusedButton = "slideshow"
 #endif

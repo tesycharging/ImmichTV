@@ -14,7 +14,7 @@ import CoreImage.CIFilterBuiltins
 enum NavigationDestination: Hashable {
     case settings
     case search
-    case album(albumId: String, albumName: String)
+    case album(albumId: String, albumName: String, shared: Bool)
     case slide(String? = nil, Int? = nil, Query? = nil)
 }
 
@@ -58,15 +58,19 @@ struct ContentView: View {
             try await immichService.fetchAlbums()
             error = false
             isLoading = false
+        } catch let apiError as APIError {
+            self.error = true
+            errorMessage = apiError.localizedDescription
+            isLoading = false
+            immichService.albumsGrouped.removeAll()
+            immichService.user = User(id: "", name: "", email: "")
+            focusedButton = "settings"
         } catch {
             self.error = true
-            if (error as NSError).domain == "NSURLErrorDomain" {
-                errorMessage = "\((error as NSError).code) \((error as NSError).domain)"
-            } else {
-                errorMessage = "\((error as NSError).code) \((error as NSError).domain)\n\((error as NSError).userInfo)"
-            }
+            errorMessage = "Failed to fetch pictures: \(error.localizedDescription)"
+            isLoading = false
             immichService.albumsGrouped.removeAll()
-            immichService.user = User(name: "", email: "")
+            immichService.user = User(id: "", name: "", email: "")
             focusedButton = "settings"
             isLoading = false
         }
@@ -89,48 +93,41 @@ struct ContentView: View {
             Group {
                 if isLoading {
                     ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(1)
+                } else if error {
+                    Text(errorMessage).font(.caption)
+                        .onTapGesture {
+                            navigationPath.append(NavigationDestination.settings)
+                        }
+                } else if immichService.albumsGrouped.isEmpty {
+                    Text("no albums").font(.caption)
                 } else {
-                    if error {
-                        Text(errorMessage).font(.caption)
-                            .onTapGesture {
-                                navigationPath.append(NavigationDestination.settings)
-                            }
-                    } else if immichService.albumsGrouped.isEmpty {
-                        Text("no albums").font(.caption)
-                    } else {
-                        ScrollView(.vertical, showsIndicators: false) {
+                    ScrollView(.vertical, showsIndicators: false) {
 #if os(tvOS)
-                            if showReviewPrompt {
-                                VStack {
-                                    Text("Enjoying the app? Leave us a review!")
-                                        .font(.caption)
-                                    HStack {
-                                        Image(uiImage: generateQRCode(from: entitlementManager.reviewURL)).resizable().scaledToFit().frame(width: 100, height: 100)
-                                        Button("Not Now") {
-                                            showReviewPrompt = false
-                                        }
-                                        .buttonStyle(.bordered).font(.caption)
+                        if showReviewPrompt {
+                            VStack {
+                                Text("Enjoying the app? Leave us a review!")
+                                    .font(.caption)
+                                HStack {
+                                    Image(uiImage: generateQRCode(from: entitlementManager.reviewURL)).resizable().scaledToFit().frame(width: 100, height: 100)
+                                    Button("Not Now") {
+                                        showReviewPrompt = false
                                     }
+                                    .buttonStyle(.bordered).font(.caption)
                                 }
-                                .padding()
-                                .background(Color.secondary)
-                                .cornerRadius(10)
-                                .shadow(radius: 5)
                             }
+                            .padding()
+                            .background(Color.secondary)
+                            .cornerRadius(10)
+                            .shadow(radius: 5)
+                        }
 #endif
-                            AssetsView(showAlbums: true, ascending: .constant(false))
-                        }.navigationTitle("Immich Albums \(immichService.user.name == "" ? "" : "of \(immichService.user.name)")")
-                    }
+                        AssetsView(showAlbums: true, ascending: .constant(false))
+                    }.navigationTitle("Immich Albums \(immichService.user.name == "" ? "" : "of \(immichService.user.name)")")
                 }
             }.toolbar {
                 ToolbarItem(placement: .navigation) {
-#if targetEnvironment(macCatalyst)
                     threeStateButton().buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "threeState"))
                         .focused($focusedButton, equals: "threeState")
-                    #else
-                    threeStateButton().buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "threeState"))
-                        .focused($focusedButton, equals: "threeState")
-                    #endif
                 }
                 ToolbarItem(placement: .navigation) {
 #if targetEnvironment(macCatalyst)
@@ -201,7 +198,7 @@ struct ContentView: View {
                         isLoading = true
                         immichService.albumsGrouped.removeAll()
                         if entitlementManager.notConfigured {
-                            immichService.user = User(name: "", email: "")
+                            immichService.user = User(id: "", name: "", email: "")
                             focusedButton = "settings"
                             self.error = true
                             errorMessage = "not configured yet"
@@ -238,25 +235,8 @@ struct ContentView: View {
                         }
                 case .settings:
                     SettingView(cameFromSetting: $cameFromSetting)
-                case .album(let albumId, let albumName):
-                    AlbumView(albumId: albumId, albumName: albumName, isLoading: $isLoading)
-                        .onAppear {
-                            if !slideActive {
-                                immichService.assetItemsGrouped.removeAll()
-                                immichService.assetItems.removeAll()
-                                isLoading = true
-                                Task {
-                                    do {
-                                        try Task.checkCancellation() // Throws if cancelled
-                                        try await immichService.fetchAssets(albumId: albumId)
-                                        isLoading = false
-                                    } catch {
-                                        print("Failed to fetch pictures: \(error)")
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        }
+                case .album(let albumId, let albumName, let shared):
+                    AlbumView(albumId: albumId, albumName: albumName, shared: shared, slideActive: $slideActive)
                 case .slide(let albumName, let index, let query):
                     SlideshowView(albumName: albumName, index: index, query: query)
                         .onAppear {
@@ -406,7 +386,11 @@ enum ToggleState: String, CaseIterable {
        case .owned:
            return "person.fill"
        case .shared:
+#if targetEnvironment(macCatalyst)
+           return "link"
+#else
            return "sharedwithyou"
+#endif
        }
    }
 }
