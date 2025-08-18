@@ -18,36 +18,6 @@
             endingLineNumber = "368"
             landmarkName = "decoder(_:response:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "EA02E4B3-845E-45D4-8ECB-ADE3FC3706DB - 5cad3b48f56ca9b7"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "ImmichShow.ImmichService.decoder&lt;&#x3c4;_0_0 where &#x3c4;_0_0: Swift.Decodable&gt;(_: Foundation.Data, response: __C.NSURLResponse) throws -&gt; &#x3c4;_0_0"
-                  moduleName = "ImmichShow.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/david/Desktop/ImmichTV/ImmichTV/ImmichService.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "368"
-                  endingLineNumber = "368">
-               </Location>
-               <Location
-                  uuid = "EA02E4B3-845E-45D4-8ECB-ADE3FC3706DB - 6af989689f6775f1"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "ImmichTV.ImmichService.decoder&lt;&#x3c4;_0_0 where &#x3c4;_0_0: Swift.Decodable&gt;(_: Foundation.Data, response: __C.NSURLResponse) throws -&gt; &#x3c4;_0_0"
-                  moduleName = "ImmichTV.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/david/Desktop/ImmichTV/ImmichTV/ImmichService.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "368"
-                  endingLineNumber = "368">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,36 +34,6 @@
             endingLineNumber = "371"
             landmarkName = "decoder(_:response:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "0BDEAA4B-BDBC-4941-B468-BC426AAFCC2A - 5cad3b48f56ca9d4"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "ImmichShow.ImmichService.decoder&lt;&#x3c4;_0_0 where &#x3c4;_0_0: Swift.Decodable&gt;(_: Foundation.Data, response: __C.NSURLResponse) throws -&gt; &#x3c4;_0_0"
-                  moduleName = "ImmichShow.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/david/Desktop/ImmichTV/ImmichTV/ImmichService.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "371"
-                  endingLineNumber = "371">
-               </Location>
-               <Location
-                  uuid = "0BDEAA4B-BDBC-4941-B468-BC426AAFCC2A - 6af989689f677592"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "ImmichTV.ImmichService.decoder&lt;&#x3c4;_0_0 where &#x3c4;_0_0: Swift.Decodable&gt;(_: Foundation.Data, response: __C.NSURLResponse) throws -&gt; &#x3c4;_0_0"
-                  moduleName = "ImmichTV.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/david/Desktop/ImmichTV/ImmichTV/ImmichService.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "371"
-                  endingLineNumber = "371">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

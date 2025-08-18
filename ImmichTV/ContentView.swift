@@ -224,6 +224,8 @@ struct ContentView: View {
             // Define navigation destinations
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(for: NavigationDestination.self) { destination in
+#if targetEnvironment(macCatalyst)
+            #else
                 switch destination {
                 case .search:
                     SearchView()
@@ -246,6 +248,7 @@ struct ContentView: View {
                             slideActive = false
                         }
                 }
+#endif
             }
             .animation(.easeInOut(duration: 0.2), value: focusedButton)
         }.navigationViewStyle(.stack) // Ensures consistent navigation behavior

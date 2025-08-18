@@ -81,7 +81,7 @@ struct AssetsView: View {
                                     Button(action: {
                                         //error = false
                                         showAlbum = true
-                                        showAlbumId = album.albumThumbnailAssetId
+                                        showAlbumId = album.id
                                         showAlbumName = album.albumName
                                         shared = (!album.albumUsers.isEmpty && album.albumUsers.contains(where: { $0.user == immichService.user }))
                                     }){
