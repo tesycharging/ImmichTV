@@ -44,8 +44,6 @@ struct AlbumView: View {
                     .onAppear {
                         error = false
                         if !slideActive {
-                            immichService.assetItemsGrouped.removeAll()
-                            immichService.assetItems.removeAll()
                             isLoading = true
                             onAppear = false
                             Task {
@@ -85,19 +83,14 @@ struct AlbumView: View {
                         Button( action: {
                             ascending.toggle()
                             isLoading = true
-                            let assetItems = immichService.assetItems
-                            immichService.assetItems.removeAll()
-                            immichService.assetItems = assetItems.reversed()
-                            if entitlementManager.groupByDay {
-                                immichService.assetItemsGrouped.removeAll()
-                                immichService.assetItemsGrouped = immichService.groupAssets(assetItems: immichService.assetItems, ascending: ascending)
-                            }
+                            immichService.sortedAndGroupedAssets(assetItems: immichService.assetItems, ascending: ascending)
                             immichService.objectWillChange.send()
                             isLoading = false
                         }) {
                             Image(systemName: ascending ? "arrow.up.square" : "arrow.down.app").frame(height: 32)
                         }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "asc"))
                             .focused($focusedButton, equals: "asc")
+                            .disabled(isLoading)
 #if targetEnvironment(macCatalyst)
                         Button( action: {
                             showSlide = true
@@ -106,6 +99,7 @@ struct AlbumView: View {
                             Image(systemName: "play").frame(height: 32)
                         }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
                             .focused($focusedButton, equals: "slideshow")
+                            .disabled(isLoading)
                             .fullScreenCover(isPresented: $showSlide, onDismiss: { slideActive = false }) {
                                 SlideshowView(albumName: albumName).environmentObject(immichService).environmentObject(entitlementManager)
                             }
@@ -114,6 +108,7 @@ struct AlbumView: View {
                             Image(systemName: "play").frame(height: 32)//.buttonStyle(PlainButtonStyle())
                         }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "slideshow"))
                             .focused($focusedButton, equals: "slideshow")
+                            .disabled(isLoading)
 #endif
                     }.padding()
                     //Text(album.albumName).font(.title).padding()

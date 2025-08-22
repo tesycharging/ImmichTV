@@ -18,6 +18,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				SlideshowViewExtIOS_MACOS.swift,
 			);
 			target = 630F3C052D888B520068BEF1 /* ImmichTV */;
 		};
@@ -33,12 +34,15 @@
 				ImmichService.swift,
 				ImmichTVApp.swift,
 				Model.swift,
+				PlaylistViewModel.swift,
 				"Preview Content/Preview Assets.xcassets",
 				RetryableAsyncImage.swift,
 				SearchDetailView.swift,
 				SearchView.swift,
 				SettingView.swift,
 				SlideshowView.swift,
+				SlideshowViewExt.swift,
+				SlideshowViewExtIOS_MACOS.swift,
 			);
 			target = 63B1CA3C2D9452C80083C2F4 /* ImmichShow */;
 		};
@@ -417,7 +421,7 @@
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -440,7 +444,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 18;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -463,7 +467,7 @@
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -486,7 +490,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 18;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

@@ -84,8 +84,6 @@ struct SearchView: View {
                         }
                         Button( action: {
                             if matches != nil {
-                                immichService.assetItems.removeAll()
-                                immichService.assetItemsGrouped.removeAll()
                                 matches = nil
                                 search = true
                             }

@@ -69,7 +69,7 @@ struct AssetsView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        LazyVStack(alignment: .leading, spacing: 0) {
             if showAlbums {
                 ForEach(immichService.albumsGrouped.keys.sorted().reversed(), id: \.self) { key in
                     VStack(alignment: .leading, spacing: 0) {

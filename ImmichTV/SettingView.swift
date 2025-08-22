@@ -38,8 +38,8 @@ struct SettingView: View {
     @State private var title = ""
     @State private var url = ""
     @State private var isPlaying = false
-    @State private var playerMusic: AVPlayer?
     @State private var comeFromSubview = false
+    @StateObject var playModel: PlaylistViewModel = PlaylistViewModel()
     
     var pickers: some View {
         Group {
@@ -62,18 +62,12 @@ struct SettingView: View {
                     .immichTVTestFieldStyle(isFocused: focusedButton == "pickerMusic")
                     .focused($focusedButton, equals: "pickerMusic")
                     .onChange(of: selectedMusic) { _, newValue in
-                        playerMusic?.pause()
+                        playModel.pause()
                         isPlaying = false
                     }
                 Button(action: {
                     isPlaying.toggle()
                     if isPlaying {
-                        do {
-                            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.duckOthers])
-                            try AVAudioSession.sharedInstance().setActive(true)
-                        } catch {
-                            print("Failed to set up audio session: \(error)")
-                        }
                         let url: URL
                         let value = musicOptions[selectedMusic] ?? ""
                         if URL(string: value)?.scheme?.lowercased() == nil {
@@ -83,10 +77,9 @@ struct SettingView: View {
                         } else {
                             url = URL(string: value)!
                         }
-                        playerMusic = AVPlayer(url: url)
-                        playerMusic?.play() // Auto-play on appear
+                        playModel.playMusicSetup(url: url, autoplay: true)
                     } else {
-                        playerMusic?.pause()
+                        playModel.pause()
                     }
                 }) {
                     Image(systemName: isPlaying ? "pause" : "play")
@@ -158,6 +151,9 @@ struct SettingView: View {
                             comeFromSubview = false
                         }
                     }
+                Text("persmission for api-key should be at least \"album.read\"")
+                    .padding(.horizontal)
+                    .cornerRadius(10)
                 HStack {
                     SecureField("API key", text: $apiKey)
                         .autocapitalization(.none)
@@ -243,7 +239,7 @@ struct SettingView: View {
         .navigationTitle("Settings")
         .blur(radius: credentialPopup ? 10 : 0)
         .onDisappear {
-            playerMusic?.pause()
+            playModel.pause()
         }
     }
 }

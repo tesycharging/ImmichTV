@@ -24,27 +24,26 @@ class ImmichService: ObservableObject {
         self.entitlementManager = entitlementManager
     }
     
-    private func groupAlbums(albums: [Album]) -> [Date: [Album]] {
+   func sortedAndGroupedAlbums(albums: [Album]) -> [Date: [Album]] {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let isoFormatter2 = ISO8601DateFormatter()
         isoFormatter2.formatOptions = [.withInternetDateTime]
-        let grouped = Dictionary(grouping: albums) { item in
-            guard let date = isoFormatter.date(from: item.endDate) else {
-                guard let date2 = isoFormatter2.date(from: item.endDate) else {
-                    print("Warning: Failed to parse date '\(item.endDate)', using current date")
-                    //   return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: Date()))!
-                    return Calendar.current.startOfDay(for: Date())
-                }
-                
-                return Calendar.current.date(from: Calendar.current.dateComponents([.year], from: date2))!
-                //return Calendar.current.startOfDay(for: date2)
-            }
-            return Calendar.current.date(from: Calendar.current.dateComponents([.year], from: date))!
-            //return Calendar.current.startOfDay(for: date)
+        
+        // Sort albums by endDate
+        let sortedAlbums = albums.sorted { album1, album2 in
+           let date1 = isoFormatter.date(from: album1.endDate) ?? (isoFormatter2.date(from: album1.endDate) ?? Date.distantPast)
+           let date2 = isoFormatter.date(from: album2.endDate) ?? (isoFormatter2.date(from: album2.endDate) ?? Date.distantPast)
+           return date1 > date2
         }
-        return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key > $1.key })
-    }
+       
+        // Group by year
+        let grouped = Dictionary(grouping: sortedAlbums) { album in
+           let date = isoFormatter.date(from: album.endDate) ?? (isoFormatter2.date(from: album.endDate) ?? Date.distantPast)
+           return Calendar.current.date(from: Calendar.current.dateComponents([.year], from: date))!
+        }
+        return grouped
+   }
     
     private func getAllAlbums(shared: Bool) async throws -> [Album] {
         guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums?apiKey=\(entitlementManager.apiKey)&shared=\(shared)") else {
@@ -61,7 +60,7 @@ class ImmichService: ObservableObject {
                 albumsGrouped = [:]
             } else {
                 try? await Task.sleep(nanoseconds: UInt64(2 * 1000000000)) // Convert seconds to nanoseconds
-                albumsGrouped = groupAlbums(albums: [Album(albumName: "Beaches", description: "", albumThumbnailAssetId: "1_thumb.jpg", albumUsers: [], id: "1", startDate: "2009-08-08T10:14:13.000Z", endDate: "2015-08-06T17:46:11.000Z"), Album(albumName: "Cars", description: "", albumThumbnailAssetId: "11_thumb.jpg", albumUsers: [], id: "2", startDate: "2011-02-14T14:09:47.230Z", endDate: "2017-05-02T11:08:34.740Z")])
+                albumsGrouped = sortedAndGroupedAlbums(albums: [Album(albumName: "Beaches", description: "", albumThumbnailAssetId: "1_thumb.jpg", albumUsers: [], id: "1", startDate: "2009-08-08T10:14:13.000Z", endDate: "2015-08-06T17:46:11.000Z"), Album(albumName: "Cars", description: "", albumThumbnailAssetId: "11_thumb.jpg", albumUsers: [], id: "2", startDate: "2011-02-14T14:09:47.230Z", endDate: "2017-05-02T11:08:34.740Z")])
             }
         } else {
             var albums:[Album] = []
@@ -85,38 +84,41 @@ class ImmichService: ObservableObject {
             case .shared:
                 resultAlbums = albumsShared.filter{ $0.albumUsers.contains(where: { $0.user == user })}
             }
-            albumsGrouped = groupAlbums(albums: resultAlbums)
+            albumsGrouped = sortedAndGroupedAlbums(albums: resultAlbums)
         }
     }
     
-    public func groupAssets(assetItems: [AssetItem], ascending: Bool) -> [Date: [AssetItem]] {
+    public func sortedAndGroupedAssets(assetItems: [AssetItem], ascending: Bool) {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let isoFormatter2 = ISO8601DateFormatter()
         isoFormatter2.formatOptions = [.withInternetDateTime]
-        let grouped = Dictionary(grouping: assetItems) { item in
-            guard let date = isoFormatter.date(from: item.localDateTime) else {
-                guard let date2 = isoFormatter2.date(from: item.localDateTime) else {
-                    print("Warning: Failed to parse date '\(item.localDateTime)', using current date")
-                    //   return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: Date()))!
-                    return Calendar.current.startOfDay(for: Date())
-                }
-                
-                //return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: date2))!
-                return Calendar.current.startOfDay(for: date2)
+        
+        self.assetItems.removeAll()
+        self.assetItemsGrouped.removeAll()
+        
+        // Sort assets by localDateTime
+        self.assetItems = assetItems.sorted { item1, item2 in
+            let date1 = isoFormatter.date(from: item1.localDateTime) ?? (isoFormatter2.date(from: item1.localDateTime) ?? Date.distantPast)
+            let date2 = isoFormatter.date(from: item2.localDateTime) ?? (isoFormatter2.date(from: item2.localDateTime) ?? Date.distantPast)
+            if ascending {
+                return date1 < date2
+            } else {
+                return date1 > date2
             }
-            //return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: date))!
-            return Calendar.current.startOfDay(for: date)
         }
-        if ascending {
-            return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key < $1.key }) // reversaed (earliest to latest
-        } else {
-            return Dictionary(uniqueKeysWithValues: grouped.sorted { $0.key > $1.key })
+        
+        if entitlementManager.groupByDay {
+            // Group by day
+            self.assetItemsGrouped = Dictionary(grouping: self.assetItems) { item in
+                let date = isoFormatter.date(from: item.localDateTime) ?? (isoFormatter2.date(from: item.localDateTime) ?? Date.distantPast)
+                return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month, .day], from: date))!
+            }
         }
     }
     
     func sortedGroupAssets(ascending: Bool) -> [Date] {
-        assetItemsGrouped.keys.sorted { ascending ? $0 < $1 : $0 > $1 }
+        ascending ? assetItemsGrouped.keys.sorted() : assetItemsGrouped.keys.sorted().reversed()
     }
     
     @MainActor
@@ -133,24 +135,14 @@ class ImmichService: ObservableObject {
                         AssetItem(id: "7.jpg", deviceAssetId: "web-Eublepharis_macularius_2009_G7.jpg-1673438640000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-09/Eublepharis_macularius_2009_G7.jpg", originalFileName: "Eublepharis_macularius_2009_G7.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z"),
                         AssetItem(id: "8.jpg", deviceAssetId: "web-Pogona_vitticeps_2009_G4.jpg-1673438828000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-08/Pogona_vitticeps_2009_G4.jpg", originalFileName: "Pogona_vitticeps_2009_G4.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z"),
                         AssetItem(id: "9.jpg", deviceAssetId: "web-Brachypelma_klaasi_2009_G12.jpg-1673438550000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2009/2009-08-08/Brachypelma_klaasi_2009_G12.jpg", originalFileName: "Brachypelma_klaasi_2009_G12.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2013-08-06T17:46:11.000Z")]
-                if ascending {
-                    assetItems = assetItems.reversed()
-                }
-                if entitlementManager.groupByDay {
-                    assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
-                }
+                sortedAndGroupedAssets(assetItems: assetItems, ascending: ascending)
             } else {
                 assetItems = [AssetItem(id: "11.jpg", deviceAssetId: "web-Telega_in_Sosonka_2017_G1.jpg-1673438906000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2017/2017-05-02/Telega_in_Sosonka_2017_G1.jpg", originalFileName: "Telega_in_Sosonka_2017_G1.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
                         AssetItem(id: "12.jpg", deviceAssetId: "web-Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg-1673438582000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2017/2017-04-21/Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg", originalFileName: "Chevrolet_Master_Special_Eagle_1933_-_Z16725_-_front.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
                         AssetItem(id: "13.jpg", deviceAssetId: "web-Calle_en_centro_de_Maracaibo.jpg-1673438560000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-02-23/Calle_en_centro_de_Maracaibo.jpg", originalFileName: "Calle_en_centro_de_Maracaibo.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
                         AssetItem(id: "14.jpg", deviceAssetId: "web-Police_car_Vienna_Volkswagen_Touran.jpg-1673438830000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-02-20/Police_car_Vienna_Volkswagen_Touran.jpg", originalFileName: "Police_car_Vienna_Volkswagen_Touran.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z"),
                         AssetItem(id: "15.jpg", deviceAssetId: "web-S-3D_cycle-car_2011_G1.jpg-1673438864000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2011/2011-02-14/S-3D_cycle-car_2011_G1.jpg", originalFileName: "S-3D_cycle-car_2011_G1.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2015-08-06T17:46:11.000Z")]
-                if ascending {
-                    assetItems = assetItems.reversed()
-                }
-                if entitlementManager.groupByDay {
-                    assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
-                }
+                sortedAndGroupedAssets(assetItems: assetItems, ascending: ascending)
             }
         } else {
             guard let url = URL(string: "\(entitlementManager.baseURL)/api/albums/\(albumId)?apiKey=\(entitlementManager.apiKey)") else {
@@ -160,14 +152,7 @@ class ImmichService: ObservableObject {
             let (data, response) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
             let asset: Asset = try decoder(data, response: response)
-            if ascending {
-                assetItems = asset.assets.reversed()
-            } else {
-                assetItems = asset.assets
-            }
-            if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
-            }
+            sortedAndGroupedAssets(assetItems: asset.assets, ascending: ascending)
         }
     }
     
@@ -206,12 +191,7 @@ class ImmichService: ObservableObject {
                      AssetItem(id: "14.jpg", deviceAssetId: "web-Strandkörbe_in_Kühlungsborn-3-.jpg-1673438900000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2012/2012-06-08/Strandkörbe_in_Kühlungsborn-3-.jpg", originalFileName: "Strandkörbe_in_Kühlungsborn-3-.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z"),
                      AssetItem(id: "15.jpg", deviceAssetId: "web-La_Restinga_Beach_3.jpg-1673438706000", ownerId: "5b48c453-d55f-4cc2-a585-ce406ea8e3d6", deviceId: "WEB", type: .image, originalPath: "upload/library/5b48c453-d55f-4cc2-a585-ce406ea8e3d6/2013/2013-01-06/La_Restinga_Beach_3.jpg", originalFileName: "La_Restinga_Beach_3.jpg", originalMimeType: "image/jpeg", isFavorite: false, exifInfo: nil, localDateTime: "2017-08-06T17:46:11.000Z")]
             let ascending = ((query.body["order"] as? String) ?? "") == "asc"
-            if ascending {
-                assetItems = assetItems.reversed()
-            }
-            if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: ascending)
-            }
+            sortedAndGroupedAssets(assetItems: assetItems, ascending: ascending)
             return nil
         } else {
             let url = query.isSmartSearch ? URL(string: "\(entitlementManager.baseURL)/api/search/smart")! : URL(string: "\(entitlementManager.baseURL)/api/search/metadata")!
@@ -233,11 +213,8 @@ class ImmichService: ObservableObject {
             decoder.dateDecodingStrategy = .iso8601
             let response = try decoder.decode(SearchResponse.self, from: data)
             let nextPage: Int? = Int(response.assets.nextPage ?? "")
-           
-            assetItems = response.assets.items
-            if entitlementManager.groupByDay {
-                assetItemsGrouped = groupAssets(assetItems: assetItems, ascending: false)
-            }
+            let ascending = ((query.body["order"] as? String) ?? "") == "asc"
+            sortedAndGroupedAssets(assetItems: response.assets.items, ascending: ascending)
             return nextPage
         }
     }
@@ -332,7 +309,7 @@ extension ImmichService {
             
             let body: [String: Any] = [
                 "name": "ImmichTV Generated Key",
-                "permissions": ["all", "album.read"]]
+                "permissions": ["album.read"]]
                     
                    /* ["all", "activity.create", "activity.read", "activity.update", "activity.delete", "activity.statistics", "apiKey.create", "apiKey.read", "apiKey.update", "apiKey.delete", "asset.read", "asset.update", "asset.delete", "asset.statistics", "asset.share", "asset.view", "asset.download", "asset.upload", "asset.replace", "album.create", "album.read", "album.update", "album.delete", "album.statistics", "album.share", "album.download", "albumAsset.create", "albumAsset.delete", "albumUser.create", "albumUser.update", "albumUser.delete", "auth.changePassword", "authDevice.delete", "archive.read", "duplicate.read", "duplicate.delete", "face.create", "face.read", "face.update", "face.delete", "job.create", "job.read", "library.create", "library.read", "library.update", "library.delete", "library.statistics", "timeline.read", "timeline.download", "memory.create", "memory.read", "memory.update", "memory.delete", "memory.statistics", "memoryAsset.create", "memoryAsset.delete", "notification.create", "notification.read", "notification.update", "notification.delete", "partner.create", "partner.read", "partner.update", "partner.delete", "person.create", "person.read", "person.update", "person.delete", "person.statistics", "person.merge", "person.reassign", "pinCode.create", "pinCode.update", "pinCode.delete", "server.about", "server.apkLinks", "server.storage", "server.statistics", "server.versionCheck", "serverLicense.read", "serverLicense.update", "serverLicense.delete", "session.create", "session.read", "session.update", "session.delete", "session.lock", "sharedLink.create", "sharedLink.read", "sharedLink.update", "sharedLink.delete", "stack.create", "stack.read", "stack.update", "stack.delete", "sync.stream", "syncCheckpoint.read", "syncCheckpoint.update", "syncCheckpoint.delete", "systemConfig.read", "systemConfig.update", "systemMetadata.read", "systemMetadata.update", "tag.create", "tag.read", "tag.update", "tag.delete", "tag.asset", "user.read", "user.update", "userLicense.create", "userLicense.read", "userLicense.update", "userLicense.delete", "userOnboarding.read", "userOnboarding.update", "userOnboarding.delete", "userPreference.read", "userPreference.update", "userProfileImage.create", "userProfileImage.read", "userProfileImage.update", "userProfileImage.delete", "adminUser.create", "adminUser.read", "adminUser.update", "adminUser.delete", "adminAuth.unlinkAll"]]*/
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
