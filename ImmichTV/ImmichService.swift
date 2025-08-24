@@ -50,7 +50,7 @@ class ImmichService: ObservableObject {
             throw NSError(domain: "url doesn't work", code: 100)
         }
         let (data, response) = try await URLSession.shared.data(from: url)
-        return try decoder(data, response: response)
+        return try decoder(data, response: response, requestURL: url)
     }
     
     @MainActor
@@ -151,7 +151,7 @@ class ImmichService: ObservableObject {
             
             let (data, response) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            let asset: Asset = try decoder(data, response: response)
+            let asset: Asset = try decoder(data, response: response, requestURL: url)
             sortedAndGroupedAssets(assetItems: asset.assets, ascending: ascending)
         }
     }
@@ -224,7 +224,7 @@ class ImmichService: ObservableObject {
             throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
         }
         let (data, response) = try await URLSession.shared.data(from: url)
-        return try decoder(data, response: response)
+        return try decoder(data, response: response, requestURL: url)
     }
     
     @MainActor
@@ -237,7 +237,7 @@ class ImmichService: ObservableObject {
             }
             let (data, response) = try await URLSession.shared.data(from: url)
             // Assuming the API returns an array of asset objects with id and path
-            user = try decoder(data, response: response)
+            user = try decoder(data, response: response, requestURL: url)
         }
     }
     
@@ -249,7 +249,7 @@ class ImmichService: ObservableObject {
                 throw APIError.wrongURL(url: "\(entitlementManager.baseURL)")
             }
             let (data, response) = try await URLSession.shared.data(from: url)
-            return try decoder(data, response: response)
+            return try decoder(data, response: response, requestURL: url)
         }
     }
     
@@ -266,8 +266,8 @@ class ImmichService: ObservableObject {
             "isFavorite": favorite
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return try decoder(data)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        return try decoder(data, response: response, requestURL: url)
     }
 }
 
@@ -289,7 +289,7 @@ extension ImmichService {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
-        let loginResponse: LoginResponse = try decoder(data, response: response)
+        let loginResponse: LoginResponse = try decoder(data, response: response, requestURL: url)
         return loginResponse.accessToken
     }
     
@@ -309,25 +309,25 @@ extension ImmichService {
             
             let body: [String: Any] = [
                 "name": "ImmichTV Generated Key",
-                "permissions": ["album.read"]]
+                "permissions": ["all"]]
                     
                    /* ["all", "activity.create", "activity.read", "activity.update", "activity.delete", "activity.statistics", "apiKey.create", "apiKey.read", "apiKey.update", "apiKey.delete", "asset.read", "asset.update", "asset.delete", "asset.statistics", "asset.share", "asset.view", "asset.download", "asset.upload", "asset.replace", "album.create", "album.read", "album.update", "album.delete", "album.statistics", "album.share", "album.download", "albumAsset.create", "albumAsset.delete", "albumUser.create", "albumUser.update", "albumUser.delete", "auth.changePassword", "authDevice.delete", "archive.read", "duplicate.read", "duplicate.delete", "face.create", "face.read", "face.update", "face.delete", "job.create", "job.read", "library.create", "library.read", "library.update", "library.delete", "library.statistics", "timeline.read", "timeline.download", "memory.create", "memory.read", "memory.update", "memory.delete", "memory.statistics", "memoryAsset.create", "memoryAsset.delete", "notification.create", "notification.read", "notification.update", "notification.delete", "partner.create", "partner.read", "partner.update", "partner.delete", "person.create", "person.read", "person.update", "person.delete", "person.statistics", "person.merge", "person.reassign", "pinCode.create", "pinCode.update", "pinCode.delete", "server.about", "server.apkLinks", "server.storage", "server.statistics", "server.versionCheck", "serverLicense.read", "serverLicense.update", "serverLicense.delete", "session.create", "session.read", "session.update", "session.delete", "session.lock", "sharedLink.create", "sharedLink.read", "sharedLink.update", "sharedLink.delete", "stack.create", "stack.read", "stack.update", "stack.delete", "sync.stream", "syncCheckpoint.read", "syncCheckpoint.update", "syncCheckpoint.delete", "systemConfig.read", "systemConfig.update", "systemMetadata.read", "systemMetadata.update", "tag.create", "tag.read", "tag.update", "tag.delete", "tag.asset", "user.read", "user.update", "userLicense.create", "userLicense.read", "userLicense.update", "userLicense.delete", "userOnboarding.read", "userOnboarding.update", "userOnboarding.delete", "userPreference.read", "userPreference.update", "userProfileImage.create", "userProfileImage.read", "userProfileImage.update", "userProfileImage.delete", "adminUser.create", "adminUser.read", "adminUser.update", "adminUser.delete", "adminAuth.unlinkAll"]]*/
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
             let (data, response) = try await URLSession.shared.data(for: request)
-            let apiKeyResponse: APIRequestResponse = try decoder(data, response: response)
+            let apiKeyResponse: APIRequestResponse = try decoder(data, response: response, requestURL: url)
             return apiKeyResponse.apiKey.id
         }
     }
 }
 
 extension ImmichService {
-    func decoder<T: Decodable>(_ data: Data, response: URLResponse = HTTPURLResponse(url: URL(string: "http")!, statusCode: 200, httpVersion: "", headerFields: [:])!) throws -> T {
+    func decoder<T: Decodable>(_ data: Data, response: URLResponse = HTTPURLResponse(url: URL(string: "http")!, statusCode: 200, httpVersion: "", headerFields: [:])!, requestURL: URL) throws -> T {
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.urlError(error: URLError(.badServerResponse))
+            throw APIError.urlError(error: URLError(.badServerResponse), requestURL: requestURL)
         }
         
-        var apiError = APIError.decoderError(msg: "")
+        var apiError = APIError.decoderError(msg: "", requestURL: URL(string: "http")!)
         do {
             switch httpResponse.statusCode {
             case 200, 201: return try JSONDecoder().decode(T.self, from: data)
@@ -336,17 +336,17 @@ extension ImmichService {
                 print(httpResponse.statusCode)
                 print(httpResponse.url!)
                 print(errorMessage.description)
-                apiError = APIError.requestERROR(error: errorMessage, url: httpResponse.url)
+                apiError = APIError.requestERROR(error: errorMessage, url: httpResponse.url, requestURL: requestURL)
             }
         } catch {
             print(httpResponse.statusCode)
             print(httpResponse.url!)
             if let utf8String = String(data: data, encoding: .utf8) {
                 print("\(utf8String)")
-                throw APIError.decoderError(msg: "\(utf8String)")
+                throw APIError.decoderError(msg: "\(utf8String)", requestURL: requestURL)
             } else {
                 print(URLError(.badServerResponse))
-                throw APIError.urlError(error: URLError(.badServerResponse))
+                throw APIError.urlError(error: URLError(.badServerResponse), requestURL: requestURL)
                 //throw error
             }
         }
@@ -522,19 +522,19 @@ extension ImmichService {
 #endif
 
 enum APIError: Error {
-    case decoderError(msg: String)
-    case requestERROR(error: ErrorMessage, url: URL?)
-    case urlError(error: URLError)
+    case decoderError(msg: String, requestURL: URL)
+    case requestERROR(error: ErrorMessage, url: URL?, requestURL: URL)
+    case urlError(error: URLError, requestURL: URL)
     case wrongURL(url: String)
     case downloadError(msg: String)
     
     public var description: String {
         switch self {
-        case .decoderError(let msg): return "Error: \(msg)"
-        case .requestERROR(let error, let url): return "request: \(url ?? URL(string: "-")!)\n\(error.description)"
-        case .urlError(let error): return "Error: \(error.localizedDescription)"
+        case .decoderError(let msg, let requestURL): return "Decoding Error: \nrequest: \(requestURL)\nresponse: \(msg)"
+        case .requestERROR(let error, let url, let requestURL): return "RequestError: \nrequest: \(requestURL)\nURL: \(url ?? URL(string: "-")!)\n\(error.description)"
+        case .urlError(let error, let requestURL): return "URL Error: \nrequest: \(requestURL)\nerror: \(error.localizedDescription)"
         case .wrongURL(let url): return "url doesn't work: \(url)"
-        case .downloadError(let msg): return "\(msg)"
+        case .downloadError(let msg): return "Download Error: \(msg)"
         }
     }
     

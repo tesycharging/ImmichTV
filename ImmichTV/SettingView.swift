@@ -62,7 +62,7 @@ struct SettingView: View {
                     .immichTVTestFieldStyle(isFocused: focusedButton == "pickerMusic")
                     .focused($focusedButton, equals: "pickerMusic")
                     .onChange(of: selectedMusic) { _, newValue in
-                        playModel.pause()
+                        playModel.playerMusic.pause()
                         isPlaying = false
                     }
                 Button(action: {
@@ -79,7 +79,7 @@ struct SettingView: View {
                         }
                         playModel.playMusicSetup(url: url, autoplay: true)
                     } else {
-                        playModel.pause()
+                        playModel.playerMusic.pause()
                     }
                 }) {
                     Image(systemName: isPlaying ? "pause" : "play")
@@ -239,7 +239,7 @@ struct SettingView: View {
         .navigationTitle("Settings")
         .blur(radius: credentialPopup ? 10 : 0)
         .onDisappear {
-            playModel.pause()
+            playModel.playerMusic.pause()
         }
     }
 }

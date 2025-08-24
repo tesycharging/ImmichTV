@@ -113,7 +113,6 @@ struct MAC_IOSCommand: ViewModifier {
     @Binding var zoomScale: CGFloat
     @Binding var swipeOffset: CGFloat
     var minScale: CGFloat
-    @Binding var isBarVisible: Bool
     @ObservedObject var playlistModel: PlaylistViewModel
     let assetItemsCount: Int
     @Environment(\.dismiss) var dismiss // For dismissing the full-screen view
@@ -122,13 +121,17 @@ struct MAC_IOSCommand: ViewModifier {
         content.onTapGesture(count: 1) {
             if zoomScale == minScale {
                 withAnimation {
-                    if isBarVisible {
-                        isBarVisible = false
+                    if playlistModel.isBarVisible {
                         playlistModel.hideToolbar()
                     } else {
                         playlistModel.showToolbar()
                     }
                 }
+            }
+        }
+        .onTapGesture(count: 2) {
+            if !playlistModel.isBarVisible {
+                playlistModel.showVideoControls.toggle()
             }
         }
         .gesture(
@@ -196,7 +199,6 @@ extension View {
         zoomScale: Binding<CGFloat>,
         swipeOffset: Binding<CGFloat>,
         minScale: CGFloat,
-        isBarVisible: Binding<Bool>,
         playlistModel: PlaylistViewModel,
         assetItemsCount: Int
     ) -> some View {
@@ -204,7 +206,6 @@ extension View {
             zoomScale: zoomScale,
             swipeOffset: swipeOffset,
             minScale: minScale,
-            isBarVisible: isBarVisible,
             playlistModel: playlistModel,
             assetItemsCount: assetItemsCount
         ))

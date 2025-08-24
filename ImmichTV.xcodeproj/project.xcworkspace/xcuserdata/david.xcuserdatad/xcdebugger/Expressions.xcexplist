@@ -14,24 +14,13 @@
          contextName = "ImmichService.decoder&lt;ImmichShow.Asset&gt;(_:response:):ImmichService.swift">
       </ContextState>
       <ContextState
-         contextName = "closure #9 in SlideshowView.body.getter:SlideshowView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "startIndex">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
       </ContextState>
       <ContextState
-         contextName = "PlaylistViewModel.showToolbar():PlaylistViewModel.swift">
+         contextName = "closure #1 in closure #1 in closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "imeToolbar?.isValid">
-            </PersistentString>
-            <PersistentString
-               value = "timeRemaining">
-            </PersistentString>
-            <PersistentString
-               value = "timeToolbar">
+               value = "entitlementManager.reviewURL">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -75,10 +64,10 @@
          contextName = "closure #1 in closure #3 in closure #1 in ContentView.body.getter:ContentView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "error is NSURLErrorDomain">
+               value = "(error as NSError).code">
             </PersistentString>
             <PersistentString
-               value = "user">
+               value = "showReviewPrompt">
             </PersistentString>
             <PersistentString
                value = "entitlementManager.currentVersion">
@@ -87,19 +76,19 @@
                value = "(error as NSError).userInfo">
             </PersistentString>
             <PersistentString
+               value = "errorMessage">
+            </PersistentString>
+            <PersistentString
                value = "entitlementManager.processCompletedCount">
             </PersistentString>
             <PersistentString
                value = "(error as NSError).domain">
             </PersistentString>
             <PersistentString
-               value = "errorMessage">
+               value = "error is NSURLErrorDomain">
             </PersistentString>
             <PersistentString
-               value = "(error as NSError).code">
-            </PersistentString>
-            <PersistentString
-               value = "showReviewPrompt">
+               value = "user">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -118,13 +107,13 @@
          contextName = "closure #2 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in AssetsView.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "isLoading">
+               value = "error.description">
             </PersistentString>
             <PersistentString
                value = "errorMessage">
             </PersistentString>
             <PersistentString
-               value = "error.description">
+               value = "isLoading">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -155,6 +144,17 @@
             </PersistentString>
             <PersistentString
                value = "entitlementManager.accessToken">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "PlaylistViewModel.hideToolbar():PlaylistViewModel.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "self.hasVideoContronls">
+            </PersistentString>
+            <PersistentString
+               value = "self.videoContronls">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -263,6 +263,34 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "PlaylistViewModel.showToolbar():PlaylistViewModel.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "hasVideoContronls">
+            </PersistentString>
+            <PersistentString
+               value = "isVideoPlaying">
+            </PersistentString>
+            <PersistentString
+               value = "imeToolbar?.isValid">
+            </PersistentString>
+            <PersistentString
+               value = "timeRemaining">
+            </PersistentString>
+            <PersistentString
+               value = "timeToolbar">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #9 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "startIndex">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "closure #2 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in AssetsView.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
@@ -275,17 +303,6 @@
          <PersistentStrings>
             <PersistentString
                value = "baseURL">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #1 in closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "entitlementManager.reviewURL">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

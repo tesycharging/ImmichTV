@@ -14,27 +14,36 @@ import AVFoundation
 // AVPlayer UIViewControllerRepresentable for video playback
 struct AVPlayerView: UIViewControllerRepresentable {
     let player: AVPlayer
+    @ObservedObject var playlistModel: PlaylistViewModel // Binding to control visibility of playback controls
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
         controller.player = player
-        controller.showsPlaybackControls = false // Full-screen, no controls
+        controller.showsPlaybackControls = playlistModel.showVideoControls // Set initial control visibility
         controller.videoGravity = .resizeAspectFill
         return controller
     }
     
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        // Update control visibility when showControls changes
+        uiViewController.showsPlaybackControls = playlistModel.showVideoControls
+    }
 }
 
 // ViewModel to manage playlist logic
 class PlaylistViewModel: ObservableObject {
     @Published var currentIndex = 0
+    private var observerMusic: Any?
+    private var observerVideo: Any?
     let player = AVPlayer()
-    private var playerMusic = AVPlayer()
+    var playerMusic = AVPlayer()
     private var timer: Timer?
     private var isVideoPlaying = false
+    private var timeRemaining = 0 // Initial timer duration in seconds
     private var timeToolbar: Timer?
-    @Published var isBarVisible: Bool = true // Controls bar visibility
+    private var hasVideoContronls = false
+    @Published var showVideoControls = false // Controls video buttons visibilty
+    @Published var isBarVisible: Bool = false // Controls bar visibility
     @Published var showAlbumName = true
     @Published var running = true {
         didSet {
@@ -45,23 +54,33 @@ class PlaylistViewModel: ObservableObject {
     // Play video
     func playVideo(url: URL, count: Int) {
         playerMusic.pause()
+        timer?.invalidate()
         let playerItem = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: playerItem)
+        isVideoPlaying = true
         player.play()
+        print("play video")
         
+        //remove the observer from the last video
+        if let observer = self.observerVideo {
+            NotificationCenter.default.removeObserver(observer)
+        }
         // Observe when video ends to move to next item
-        NotificationCenter.default.addObserver(
+        observerVideo = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: playerItem,
             queue: .main
         ) { [weak self] _ in
-            self?.playerMusic.play()
-            print("play msuic after video is finished")
-            self?.nextItem(count: count)
+            if self?.running ?? false {
+                self?.nextItem(count: count)
+            } else {
+                self?.player.seek(to: .zero)
+                self?.player.play()
+            }
         }
     }
     
-    // Play Musci
+    // Play Music
     func playMusicSetup(url: URL, autoplay: Bool = false) {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
@@ -93,7 +112,7 @@ class PlaylistViewModel: ObservableObject {
         }
         
         // Observe when video ends to move to next item
-        NotificationCenter.default.addObserver(
+        observerMusic = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: playerItem,
             queue: .main
@@ -105,7 +124,9 @@ class PlaylistViewModel: ObservableObject {
     }
     
     // Start timer for image display
-    private func startImageTimer(duration: TimeInterval, count: Int) {
+    func startImageTimer(duration: TimeInterval, count: Int) {
+        playerMusic.play()
+        print("play music")
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             self?.nextItem(count: count)
@@ -114,47 +135,57 @@ class PlaylistViewModel: ObservableObject {
     
     // Move to next item in playlist
     func nextItem(count: Int) {
-        currentIndex = (currentIndex + 1) % count
-        timer?.invalidate()
         player.pause()
+        isVideoPlaying = false
+        timer?.invalidate()
+        currentIndex = (currentIndex + 1) % count
     }
     
     // Move to previous item in playlist
     func previousItem(count: Int) {
-        currentIndex = (currentIndex - 1 + count) % count
-        timer?.invalidate()
         player.pause()
+        isVideoPlaying = false
+        timer?.invalidate()
+        currentIndex = (currentIndex - 1 + count) % count
     }
     
     // Pause Playlist
-    func pause() {
-        timer?.invalidate()
+    func pausePlaylist() {
+        running = false
         player.pause()
+        isVideoPlaying = false
+        timer?.invalidate()
         playerMusic.pause()
         print("pause music")
     }
     
-    // Play Playlist
-    func play(duration: TimeInterval, count: Int) {
-        startImageTimer(duration: duration, count: count)
-        playerMusic.play()
-        print("play music")
-    }
-    
-    deinit {
-        timer?.invalidate()
+    func deinitPlaylist() {
+        pausePlaylist()
+        if let observer = self.observerVideo {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = self.observerMusic {
+            NotificationCenter.default.removeObserver(observer)
+        }
         NotificationCenter.default.removeObserver(self)
         timeToolbar?.invalidate()
     }
     
-    private var timeRemaining = 0 // Initial timer duration in seconds
+    deinit {
+        deinitPlaylist()
+    }
+    
     // Start the timer
     func showToolbar() {
         if isBarVisible {
             self.timeRemaining += 10
         } else {
             self.timeRemaining = 10
-            isBarVisible = true
+            if isVideoPlaying && hasVideoContronls {
+                showVideoControls = true
+            } else {
+                isBarVisible = true
+            }
         }
         if timeToolbar == nil || !(timeToolbar?.isValid ?? true) {
             // Create a timer that fires every second
@@ -162,20 +193,19 @@ class PlaylistViewModel: ObservableObject {
                 if self.timeRemaining > 0 {
                     self.timeRemaining = self.timeRemaining - 1
                 } else {
-                    self.isBarVisible = false
-                    self.showAlbumName = false
-                    self.timeToolbar?.invalidate()
-                    self.timeToolbar = nil
+                    self.hideToolbar()
                 }
             }
         }
     }
     
     func hideToolbar() {
-        timeToolbar?.invalidate()
-        timeToolbar = nil
-        isBarVisible = false
+        self.isBarVisible = false
         self.showAlbumName = false
+        self.hasVideoContronls.toggle()
+        self.showVideoControls = false
+        self.timeToolbar?.invalidate()
+        self.timeToolbar = nil
         self.timeRemaining = 0
     }
 }

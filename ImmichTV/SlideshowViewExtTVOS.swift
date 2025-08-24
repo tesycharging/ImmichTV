@@ -39,6 +39,7 @@ struct TVOSCommand: ViewModifier {
     let isFavoritable: Bool
     let thumbnailShown: Bool
     @Binding var focusedButton: ButtonFocus?
+    var isVideoAndPlayable: Bool
     
     func zoomOffset(direction: MoveCommandDirection) {
         let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
@@ -165,7 +166,6 @@ struct TVOSCommand: ViewModifier {
                         playlistModel.showToolbar()
                     }
                 } else {
-                    playlistModel.isBarVisible = true
                     focusedButton = .playpause
                     playlistModel.showToolbar()
                 }
@@ -178,12 +178,14 @@ struct TVOSCommand: ViewModifier {
     func body(content: Content) -> some View {
         content.onPlayPauseCommand {
             playlistModel.running.toggle()
-            if playlistModel.running {
-                playlistModel.showAlbumName = true
-                zoomScale = minScale
-                playlistModel.play(duration: timeinterval, count: assetItemsCount)
-            } else {
-                playlistModel.pause()
+            if !isVideoAndPlayable {
+                if playlistModel.running {
+                    playlistModel.showAlbumName = true
+                    zoomScale = minScale
+                    playlistModel.startImageTimer(duration: timeinterval, count: assetItemsCount)
+                } else {
+                    playlistModel.pausePlaylist()
+                }
             }
         }
         .onMoveCommand { direction in // Handle arrow key/remote input
@@ -225,7 +227,8 @@ extension View {
         assetItemsCount: Int,
         isFavoritable: Bool,
         thumbnailShown: Bool,
-        focusedButton : Binding<ButtonFocus?>
+        focusedButton: Binding<ButtonFocus?>,
+        isVideoAndPlayable: Bool
     ) -> some View {
         modifier(TVOSCommand(
             timeinterval: timeinterval,
@@ -241,7 +244,8 @@ extension View {
             assetItemsCount: assetItemsCount,
             isFavoritable: isFavoritable,
             thumbnailShown: thumbnailShown,
-            focusedButton: focusedButton)
+            focusedButton: focusedButton,
+            isVideoAndPlayable: isVideoAndPlayable)
         )
     }
 }

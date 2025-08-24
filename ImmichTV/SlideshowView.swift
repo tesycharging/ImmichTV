@@ -58,9 +58,8 @@ struct SlideshowView: View {
                 offsetStepY = 0
                 offset = .zero
             } else {
-                playlistModel.isBarVisible = false
-                playlistModel.running = false
-                playlistModel.pause()
+                playlistModel.hideToolbar()
+                playlistModel.pausePlaylist()
             }
         }
     }
@@ -166,16 +165,12 @@ struct SlideshowView: View {
                      }
                  } else {
                      // Video playback
-                     AVPlayerView(player: playlistModel.player)
+                     AVPlayerView(player: playlistModel.player, playlistModel: playlistModel)
                          .overlay() {
                              albumTitle
                          }
                          .onAppear {
                              isFavorite = currentItem.isFavorite
-                             playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
-                         }
-                         .onDisappear {
-                             playlistModel.pause()
                          }
                  }
                  // Transparent bar
@@ -217,16 +212,18 @@ struct SlideshowView: View {
                      isFavorite = currentItem.isFavorite
                      thumbnail = true
                  }
-                 if playlistModel.running {
-                     playlistModel.play(duration: entitlementManager.timeinterval, count: assetItemsCount)
+                 if isVideoAndPlayable {
+                     playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
+                 } else if playlistModel.running {
+                        playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
                  }
              }
          }
         #if os(tvOS)
-         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStepX: $offsetStepX, offsetStepY: $offsetStepY, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: isFavoritable, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding)
+         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStepX: $offsetStepX, offsetStepY: $offsetStepY, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: isFavoritable, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding, isVideoAndPlayable: isVideoAndPlayable)
         #else
          .offset(x: swipeOffset) // Moves the text based on swipe
-         .mac_iosCommand(zoomScale: $zoomScale, swipeOffset: $swipeOffset, minScale: minScale, isBarVisible: $playlistModel.isBarVisible, playlistModel: playlistModel, assetItemsCount: assetItemsCount)
+         .mac_iosCommand(zoomScale: $zoomScale, swipeOffset: $swipeOffset, minScale: minScale, playlistModel: playlistModel, assetItemsCount: assetItemsCount)
          #endif
          .background(Color.black)
          .onAppear {
@@ -235,12 +232,14 @@ struct SlideshowView: View {
              playlistModel.showToolbar()
              guard let url = entitlementManager.musicURL else { return }
              playlistModel.playMusicSetup(url: url)
-             if playlistModel.running {
-                 playlistModel.play(duration: entitlementManager.timeinterval, count: assetItemsCount)
+             if playlistModel.running && !isVideoAndPlayable {
+                 playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
+             } else if isVideoAndPlayable {
+                 playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
              }
            }
          .onDisappear {
-             playlistModel.player.pause()
+             playlistModel.deinitPlaylist()
          }
          .animation(.easeInOut(duration: 1.0), value: playlistModel.isBarVisible)
      }
@@ -295,7 +294,7 @@ struct SlideshowView: View {
                             Button(action: {
                                 playlistModel.showToolbar()
                                 playlistModel.running = false
-                                playlistModel.pause()
+                                playlistModel.pausePlaylist()
                                 thumbnail = false
                             }) {
                                 Image(systemName: currentItem.type == .video ? "video" : "photo")
@@ -317,9 +316,9 @@ struct SlideshowView: View {
                                 do {
                                     downloading = true
                                     if currentItem.type == .image {
-                                        alertMessage = try await immichService.downloadImage(currentIndex: currentIndex)
+                                        alertMessage = try await immichService.downloadImage(currentIndex: playlistModel.currentIndex)
                                     } else {
-                                        alertMessage = try await immichService.downloadVideo(currentIndex: currentIndex)
+                                        alertMessage = try await immichService.downloadVideo(currentIndex: playlistModel.currentIndex)
                                     }
                                 } catch {
                                     alertMessage = error.localizedDescription
@@ -369,11 +368,13 @@ struct SlideshowView: View {
                 Button(action: {
                     playlistModel.showToolbar()
                     playlistModel.running.toggle()
-                    if playlistModel.running {
-                        playlistModel.showAlbumName = true
-                        playlistModel.play(duration: entitlementManager.timeinterval, count: immichService.assetItems.count)
-                    } else {
-                        playlistModel.pause()
+                    if !isVideoAndPlayable {
+                        if playlistModel.running {
+                            playlistModel.showAlbumName = true
+                            playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
+                        } else {
+                            playlistModel.pausePlaylist()
+                        }
                     }
                 }) {
                     Image(systemName: (!playlistModel.running ? "play" : "pause")).padding(.horizontal, 30)
@@ -481,8 +482,7 @@ struct SlideshowView: View {
                         if (showVideoButton) {
                             Button(action: {
                                 playlistModel.hideToolbar()
-                                playlistModel.running = false
-                                playlistModel.pause()
+                                playlistModel.pausePlaylist()
                                 thumbnail = false
                             }) {
                                 Image(systemName: currentItem.type == .video ? "video" : "photo")
