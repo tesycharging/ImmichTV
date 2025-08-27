@@ -15,116 +15,17 @@ struct SettingView: View {
     @Binding var cameFromSetting: Bool
     @State var baseURL: String = ""
     @State var apiKey: String = ""
-    @State var slideShowOfThumbnails = false
-    @State var playVideo = false
-    @State var groupByDay = false
-    @State var timeinterval = 5.0
     @State var storage: Storage?
     @State var username = ""
     @State var password = ""
     @State private var credentialPopup = false
     @State var message = ""
-    @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
+   // @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
     @FocusState private var focusedButton: String? // Track which button is focused
-    @State var selectedMusic: String = UserDefaults.group.string(forKey: "selectedMusic") ?? "no sound"
-    @State private var musicOptions: Dictionary<String, String> = UserDefaults.group.loadOptions() ??
-    ["Song-1": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-     "Song-2": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-     "Song-3": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-     "Song-4": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-     "Song-5": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-     "no sound": ""]
-    @State private var addMusic = false
-    @State private var title = ""
-    @State private var url = ""
-    @State private var isPlaying = false
     @State private var comeFromSubview = false
-    @StateObject var playModel: PlaylistViewModel = PlaylistViewModel()
-    
-    var pickers: some View {
-        Group {
-            Text("time interval")
-            Picker("Select a number", selection: $timeinterval) {
-                ForEach(Array(stride(from: 3.0, through: 10.0, by: 1.0)), id: \.self) { number in
-                    Text("\(number, specifier: "%.1f")").tag(number)
-                }
-            }.pickerStyle(.menu)
-                .immichTVTestFieldStyle(isFocused: focusedButton == "picker")
-                .focused($focusedButton, equals: "picker")
-            Text("music")
-            HStack(spacing: 5) {
-                // Picker to select an musicOption
-                Picker("Select a music", selection: $selectedMusic) {
-                    ForEach(musicOptions.keys.sorted(), id: \.self) { key in
-                        Text(key).tag(key)
-                    }
-                }.pickerStyle(.menu)
-                    .immichTVTestFieldStyle(isFocused: focusedButton == "pickerMusic")
-                    .focused($focusedButton, equals: "pickerMusic")
-                    .onChange(of: selectedMusic) { _, newValue in
-                        playModel.playerMusic.pause()
-                        isPlaying = false
-                    }
-                Button(action: {
-                    isPlaying.toggle()
-                    if isPlaying {
-                        let url: URL
-                        let value = musicOptions[selectedMusic] ?? ""
-                        if URL(string: value)?.scheme?.lowercased() == nil {
-                            let fileManager = FileManager.default
-                            let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                            url = documentsDirectory.appendingPathComponent(musicOptions[selectedMusic] ?? "")
-                        } else {
-                            url = URL(string: value)!
-                        }
-                        playModel.playMusicSetup(url: url, autoplay: true)
-                    } else {
-                        playModel.playerMusic.pause()
-                    }
-                }) {
-                    Image(systemName: isPlaying ? "pause" : "play")
-                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "play"))
-                    .focused($focusedButton, equals: "play")
-                Button("add") {
-                    addMusic =  true
-                }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "add"))
-                    .focused($focusedButton, equals: "add")
-#if os(tvOS)
-                    .sheet(isPresented: $addMusic) {
-                        AddMusicPopup(key: $title, value: $url, isPresented: $addMusic, comeFromSubview: $comeFromSubview, onSubmit: {
-                            musicOptions[title] = url
-                            selectedMusic = title
-                        })
-                    }
-#else
-                    .popover(isPresented: $addMusic) {
-                        AddMusicPopup(key: $title, value: $url, isPresented: $addMusic, comeFromSubview: $comeFromSubview, onSubmit: {
-                            musicOptions[title] = url
-                            selectedMusic = title
-                        })
-                    }
-#endif
-            }
-            Spacer()
-            Button("update settings") {
-                entitlementManager.baseURL = baseURL
-                entitlementManager.apiKey = apiKey
-                entitlementManager.slideShowOfThumbnails = slideShowOfThumbnails
-                entitlementManager.playVideo = playVideo
-                entitlementManager.timeinterval = timeinterval
-                entitlementManager.groupByDay = groupByDay
-                entitlementManager.timeinterval = timeinterval
-                entitlementManager.selectedMusic = selectedMusic
-                entitlementManager.musicOptions = musicOptions
-                cameFromSetting = true
-                dismiss()
-            }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "updatesettings"))
-                .focused($focusedButton, equals: "updatesettings")
-        }
-    }
     
     var body: some View {
-        VStack {
+        Group {
             ScrollView(.vertical, showsIndicators: false) {
                 TextField("http://immich-server:2283", text: $baseURL).immichTVTestFieldStyle(isFocused: focusedButton == "server")
                     .focused($focusedButton, equals: "server")
@@ -136,10 +37,6 @@ struct SettingView: View {
                         if !comeFromSubview {
                             baseURL = entitlementManager.baseURL
                             apiKey = entitlementManager.apiKey
-                            slideShowOfThumbnails = entitlementManager.slideShowOfThumbnails
-                            playVideo = entitlementManager.playVideo
-                            groupByDay = entitlementManager.groupByDay
-                            timeinterval = entitlementManager.timeinterval
                             Task {@MainActor in
                                 do {
                                     storage = try await immichService.getStorage()
@@ -200,26 +97,11 @@ struct SettingView: View {
                 Text(message)
                     .padding(.horizontal)
                     .cornerRadius(10)
-                Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
-                    .immichTVTestFieldStyle(isFocused: focusedButton == "toggle")
-                    .focused($focusedButton, equals: "toggle")
-                Toggle("play videos", isOn: $playVideo)
-                    .immichTVTestFieldStyle(isFocused: focusedButton == "video")
-                    .focused($focusedButton, equals: "video")
-                    .disabled(slideShowOfThumbnails)
-                    .opacity(!slideShowOfThumbnails ? 1.0: 0.5)
-                Toggle("group assets by day", isOn: $groupByDay)
-                    .immichTVTestFieldStyle(isFocused: focusedButton == "groupby")
-                    .focused($focusedButton, equals: "groupby")
-                #if os(tvOS)
-                HStack {
-                    pickers
-                }
-                #else
-                VStack {
-                    pickers
-                }
-                #endif
+                SlideShowSettingView(comeFromSubview: $comeFromSubview, onSubmit: {
+                        entitlementManager.baseURL = baseURL
+                        entitlementManager.apiKey = apiKey
+                        cameFromSetting = true
+                    }).environmentObject(entitlementManager)
                 Spacer()
                 if let storage = self.storage {
                     Divider()
@@ -230,17 +112,10 @@ struct SettingView: View {
                     Text("Disk Use: \(storage.diskUse)").font(.caption2).padding(.horizontal, 20)
                 }
             }
-            #if os(tvOS)
-            .onChange(of: timeinterval) { _, _ in
-                focusedButton = "updateButton"
-            }
-            #endif
-        }.padding(20)
+        }
+        .padding(20)
         .navigationTitle("Settings")
         .blur(radius: credentialPopup ? 10 : 0)
-        .onDisappear {
-            playModel.playerMusic.pause()
-        }
     }
 }
 
@@ -477,3 +352,162 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 }
 #endif
+
+struct SlideShowSettingView: View {
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @Environment(\.dismiss) private var dismiss // For dismissing the full-screen view
+    //@Binding var timeinterval: TimeInterval
+    //@Binding var cameFromSetting: Bool
+    @Binding var comeFromSubview: Bool
+    var onSubmit: () -> Void
+    @FocusState private var focusedButton: String? // Track which button is focused
+    @StateObject var playModel: PlaylistViewModel = PlaylistViewModel()
+    @State private var isPlaying = false
+    @State private var addMusic = false
+    @State private var title = ""
+    @State private var url = ""
+    @State var slideShowOfThumbnails = false
+    @State var playVideo = false
+    @State var groupByDay = false
+    @State var timeinterval = 5.0
+    @State var selectedMusic: String = UserDefaults.group.string(forKey: "selectedMusic") ?? "no sound"
+    @State private var musicOptions: Dictionary<String, String> = UserDefaults.group.loadOptions() ??
+    ["Song-1": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+     "Song-2": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+     "Song-3": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+     "Song-4": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+     "Song-5": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+     "no sound": ""]
+    
+    var settingView: some View {
+        Group {
+            HStack {
+                Text("time interval")
+                Picker("Select a number", selection: $timeinterval) {
+                    ForEach(Array(stride(from: 3.0, through: 10.0, by: 1.0)), id: \.self) { number in
+                        Text("\(number, specifier: "%.1f")").tag(number)
+                    }
+                }.pickerStyle(.menu)
+                    .immichTVTestFieldStyle(isFocused: focusedButton == "picker")
+                    .focused($focusedButton, equals: "picker")
+            }
+            HStack {
+                Text("music")
+                HStack(spacing: 5) {
+                    // Picker to select an musicOption
+                    Picker("Select a music", selection: $selectedMusic) {
+                        ForEach(musicOptions.keys.sorted(), id: \.self) { key in
+                            Text(key).tag(key)
+                        }
+                    }.pickerStyle(.menu)
+                        .immichTVTestFieldStyle(isFocused: focusedButton == "pickerMusic")
+                        .focused($focusedButton, equals: "pickerMusic")
+                        .onChange(of: selectedMusic) { _, newValue in
+                            playModel.playerMusic.pause()
+                            isPlaying = false
+                        }
+                        .onDisappear {
+                            playModel.playerMusic.pause()
+                        }
+                    Button(action: {
+                        isPlaying.toggle()
+                        if isPlaying {
+                            let url: URL
+                            let value = musicOptions[selectedMusic] ?? ""
+                            if URL(string: value)?.scheme?.lowercased() == nil {
+                                let fileManager = FileManager.default
+                                let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                                url = documentsDirectory.appendingPathComponent(musicOptions[selectedMusic] ?? "")
+                            } else {
+                                url = URL(string: value)!
+                            }
+                            playModel.playMusicSetup(url: url, autoplay: true)
+                        } else {
+                            playModel.playerMusic.pause()
+                        }
+                    }) {
+                        Image(systemName: isPlaying ? "pause" : "play")
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "play"))
+                        .focused($focusedButton, equals: "play")
+                    Button("add") {
+                        addMusic =  true
+                    }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "add"))
+                        .focused($focusedButton, equals: "add")
+#if os(tvOS)
+                        .sheet(isPresented: $addMusic) {
+                            AddMusicPopup(key: $title, value: $url, isPresented: $addMusic, comeFromSubview: $comeFromSubview, onSubmit: {
+                                musicOptions[title] = url
+                                selectedMusic = title
+                            })
+                        }
+#else
+                        .popover(isPresented: $addMusic) {
+                            AddMusicPopup(key: $title, value: $url, isPresented: $addMusic, comeFromSubview: $comeFromSubview, onSubmit: {
+                                musicOptions[title] = url
+                                selectedMusic = title
+                            })
+                        }
+#endif
+                }
+            }
+            Spacer()
+            Button("update settings") {
+                onSubmit()
+                entitlementManager.slideShowOfThumbnails = slideShowOfThumbnails
+                entitlementManager.groupByDay = groupByDay
+#if targetEnvironment(macCatalyst)
+                //play video doesn't work in macos
+                entitlementManager.playVideo = false
+#else
+                entitlementManager.playVideo = playVideo
+#endif
+                entitlementManager.timeinterval = timeinterval
+                entitlementManager.timeinterval = timeinterval
+                entitlementManager.selectedMusic = selectedMusic
+                entitlementManager.musicOptions = musicOptions
+                dismiss()
+            }.buttonStyle(ImmichTVButtonStyle(isFocused: focusedButton == "updatesettings"))
+                .focused($focusedButton, equals: "updatesettings")
+        }
+    }
+    
+    var body: some View {
+        VStack {
+            Toggle("Slide Show with Thumbnails", isOn: $slideShowOfThumbnails)
+                .immichTVTestFieldStyle(isFocused: focusedButton == "toggle")
+                .focused($focusedButton, equals: "toggle")
+            #if targetEnvironment(macCatalyst)
+            //play video doesn't work in macos
+            #else
+            Toggle("play videos", isOn: $playVideo)
+                .immichTVTestFieldStyle(isFocused: focusedButton == "video")
+                .focused($focusedButton, equals: "video")
+                .disabled(slideShowOfThumbnails)
+                .opacity(!slideShowOfThumbnails ? 1.0: 0.5)
+            #endif
+            Toggle("group assets by day", isOn: $groupByDay)
+                .immichTVTestFieldStyle(isFocused: focusedButton == "groupby")
+                .focused($focusedButton, equals: "groupby")
+            #if os(tvOS)
+            HStack {
+                settingView
+            }.onChange(of: timeinterval) { _, _ in
+                focusedButton = "updateButton"
+            }
+            #else
+            VStack {
+                settingView
+            }
+            #endif
+        }.onAppear {
+            if !comeFromSubview {
+                slideShowOfThumbnails = entitlementManager.slideShowOfThumbnails
+                playVideo = entitlementManager.playVideo
+                groupByDay = entitlementManager.groupByDay
+                timeinterval = entitlementManager.timeinterval
+            } else {
+                comeFromSubview = false
+            }
+        }
+    }
+}

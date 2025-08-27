@@ -3,62 +3,23 @@
    version = "1.0">
    <ContextStates>
       <ContextState
-         contextName = "ImmichService.decoder&lt;ImmichShow.LoginResponse&gt;(_:response:):ImmichService.swift">
+         contextName = "closure #2 in closure #1 in closure #3 in closure #1 in AlbumView.body.getter:AlbumView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "httpResponse.statusCode">
+               value = "errorMessage">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #2 in closure #1 in AssetsView.body.getter:AssetsView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "itemIndex">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "ImmichService.decoder&lt;ImmichShow.Asset&gt;(_:response:):ImmichService.swift">
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #1 in closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "entitlementManager.reviewURL">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "ImmichService.getAllAlbums(shared:):ImmichService.swift">
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #2 in closure #1 in ContentView.body.getter:ContentView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "cameFromSetting">
-            </PersistentString>
-            <PersistentString
-               value = "wentToBackground">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in PlaylistViewModel.showToolbar():PlaylistViewModel.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "imeRemaining">
-            </PersistentString>
-            <PersistentString
-               value = "timeRemaining">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in AssetsView.body.getter:AssetsView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "isLoading">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #2 in closure #2 in closure #1 in SettingView.pickers.getter:SettingView.swift">
       </ContextState>
       <ContextState
          contextName = "closure #1 in closure #3 in closure #1 in ContentView.body.getter:ContentView.swift">
@@ -93,13 +54,60 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "AssetsView.init(showAlbums:albumName:shared:query:ascending:):AssetsView.swift">
+         contextName = "closure #4 in AssetsView.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "error">
+               value = "itemId">
             </PersistentString>
             <PersistentString
-               value = "isLoading">
+               value = "itemIndex">
+            </PersistentString>
+            <PersistentString
+               value = "immichService.assetItems.firstIndex(where: { $0.id == itemId }">
+            </PersistentString>
+            <PersistentString
+               value = "slideshowViewModel.itemId">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImmichService.fetchAssets(albumId:ascending:):ImmichService.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "assetItems.first">
+            </PersistentString>
+            <PersistentString
+               value = "entitlementManager.accessToken">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #5 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "zoomScale != minScale">
+            </PersistentString>
+            <PersistentString
+               value = "isZoomed">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in closure #1 in closure #2 in closure #1 in closure #1 in SlideshowView.toolbarView.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "currentItem">
+            </PersistentString>
+            <PersistentString
+               value = " switchFromThumbnailToVideo">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #1 in closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "entitlementManager.reviewURL">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -118,10 +126,76 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "ImmichService.getMyUser():ImmichService.swift">
+         contextName = "closure #2 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #2 in closure #1 in AssetsView.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "entitlementManager.demo">
+               value = "itemIndex">
+            </PersistentString>
+            <PersistentString
+               value = "itemId">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImmichService.loadSettings():ImmichService.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "UserDefaults.standard.string(forKey: &quot;timeinterval&quot;)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "AssetsView.init(showAlbums:albumName:shared:query:ascending:):AssetsView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "error">
+            </PersistentString>
+            <PersistentString
+               value = "isLoading">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "SlideshowView.init(albumName:index:query:itemIndex:):SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "startIndex">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImmichService.decoder&lt;ImmichShow.LoginResponse&gt;(_:response:):ImmichService.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "httpResponse.statusCode">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #3 in closure #6 in closure #1 in closure #1 in closure #1 in closure #1 in SearchView.body.getter:SearchView.swift">
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in SlideshowView.toolbarView.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "enableddButtons">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ButtonFocus.previous.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "(currentIndex - 1) % allCases.count">
+            </PersistentString>
+            <PersistentString
+               value = "(currentIndex &lt; 0 ? allCases.count : currentIndex)">
+            </PersistentString>
+            <PersistentString
+               value = "currentIndex &gt; 0">
+            </PersistentString>
+            <PersistentString
+               value = "allCases.count">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -134,16 +208,10 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "closure #1 in closure #1 in closure #1 in SettingView.body.getter:SettingView.swift">
-      </ContextState>
-      <ContextState
-         contextName = "ImmichService.fetchAssets(albumId:ascending:):ImmichService.swift">
+         contextName = "closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "assetItems.first">
-            </PersistentString>
-            <PersistentString
-               value = "entitlementManager.accessToken">
+               value = "isLoading">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -159,32 +227,13 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "URL(string: value)?.scheme">
-            </PersistentString>
-            <PersistentString
-               value = "!fileManager.fileExists(atPath: url.path)">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "StoreManager.purchase(_:):StoreManager.swift">
       </ContextState>
       <ContextState
-         contextName = "SlideshowView.body.getter:SlideshowView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "startIndex">
-            </PersistentString>
-            <PersistentString
-               value = "viewModel.currentIndex">
-            </PersistentString>
-            <PersistentString
-               value = "running">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "closure #1 in closure #1 in closure #1 in SettingView.body.getter:SettingView.swift">
       </ContextState>
       <ContextState
-         contextName = "closure #2 in closure #1 in closure #1 in ContentView.body.getter:ContentView.swift">
+         contextName = "closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in closure #1 in AssetsView.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
                value = "isLoading">
@@ -192,73 +241,10 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "ImmichService.loadSettings():ImmichService.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "UserDefaults.standard.string(forKey: &quot;timeinterval&quot;)">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #2 in closure #1 in closure #3 in closure #1 in AlbumView.body.getter:AlbumView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "errorMessage">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #1 in AlbumTitle.body.getter:AssetsView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "album.albumUsers">
-            </PersistentString>
-            <PersistentString
-               value = "user">
-            </PersistentString>
-            <PersistentString
-               value = "album.albumUsers.contains(where: { $0.user == user })">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "DateSelectionView.formattedDate.getter:DateSelectionView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "isoFormatter.string(from: date)">
-            </PersistentString>
-            <PersistentString
-               value = "selectedDay">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "SlideshowView.init(albumName:id:query:):SlideshowView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "immichService.assetItems.firstIndex(where: { $0.id == id })">
-            </PersistentString>
-            <PersistentString
-               value = "immichService.assetItems.count">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #3 in closure #1 in SettingView.pickers.getter:SettingView.swift">
+         contextName = "EntitlementManager.notConfigured.getter:EntitlementManager.swift">
          <PersistentStrings>
             <PersistentString
                value = "baseURL">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "closure #2 in closure #1 in closure #1 in SlideshowView.body.getter:SlideshowView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "width / g.size.width">
-            </PersistentString>
-            <PersistentString
-               value = "offsetStepX">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -283,10 +269,175 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "DateSelectionView.formattedDate.getter:DateSelectionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "isoFormatter.string(from: date)">
+            </PersistentString>
+            <PersistentString
+               value = "selectedDay">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "TVOSCommand.arrowCommands(direction:):SlideshowViewExtTVOS.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "lastFocusedButton">
+            </PersistentString>
+            <PersistentString
+               value = "!disableddButtons.contains(p ?? .close)">
+            </PersistentString>
+            <PersistentString
+               value = "disableddButtons.contains(p ?? .close)">
+            </PersistentString>
+            <PersistentString
+               value = "disableddButtons.contains(n ?? .setting) ">
+            </PersistentString>
+            <PersistentString
+               value = "disableddButtons">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "isVideoAndPlayable ">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "NSUserDefaults.loadOptions():EntitlementManager.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "URL(string: value)?.scheme">
+            </PersistentString>
+            <PersistentString
+               value = "!fileManager.fileExists(atPath: url.path)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "closure #9 in SlideshowView.body.getter:SlideshowView.swift">
          <PersistentStrings>
             <PersistentString
                value = "startIndex">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImmichService.getAllAlbums(shared:):ImmichService.swift">
+      </ContextState>
+      <ContextState
+         contextName = "SlideshowView.init(albumName:id:query:):SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "immichService.assetItems.firstIndex(where: { $0.id == id })">
+            </PersistentString>
+            <PersistentString
+               value = "immichService.assetItems.count">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "TVOSCommand.zoomOffset(direction:):SlideshowViewExtTVOS.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "offsetStepX">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "startIndex">
+            </PersistentString>
+            <PersistentString
+               value = "viewModel.currentIndex">
+            </PersistentString>
+            <PersistentString
+               value = "running">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #2 in closure #2 in closure #1 in SettingView.pickers.getter:SettingView.swift">
+      </ContextState>
+      <ContextState
+         contextName = "closure #11 in closure #1 in closure #1 in SlideshowView.toolbarView.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "isMac()">
+            </PersistentString>
+            <PersistentString
+               value = "playlistModel.thumbnail">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #2 in closure #1 in ContentView.body.getter:ContentView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "cameFromSetting">
+            </PersistentString>
+            <PersistentString
+               value = "wentToBackground">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in PlaylistViewModel.showToolbar():PlaylistViewModel.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "imeRemaining">
+            </PersistentString>
+            <PersistentString
+               value = "timeRemaining">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImmichService.getMyUser():ImmichService.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "entitlementManager.demo">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #13 in closure #1 in closure #1 in SlideshowView.toolbarView.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "maxScale">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #2 in closure #1 in closure #1 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "width / g.size.width">
+            </PersistentString>
+            <PersistentString
+               value = "offsetStepX">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in SlideshowView.body.getter:SlideshowView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "startIndex">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in closure #1 in SettingView.pickers.getter:SettingView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "baseURL">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -299,10 +450,16 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "EntitlementManager.notConfigured.getter:EntitlementManager.swift">
+         contextName = "closure #1 in AlbumTitle.body.getter:AssetsView.swift">
          <PersistentStrings>
             <PersistentString
-               value = "baseURL">
+               value = "album.albumUsers">
+            </PersistentString>
+            <PersistentString
+               value = "user">
+            </PersistentString>
+            <PersistentString
+               value = "album.albumUsers.contains(where: { $0.user == user })">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

@@ -26,9 +26,10 @@ struct AssetsView: View {
     @State private var showAlbum = false
     @State private var showAlbumId = ""
     @State private var showAlbumName = ""
-    @State private var itemId = ""
+    //@State private var itemId = ""
     @State private var showSlide = false
     @State private var slideActive = false
+    @StateObject private var slideshowViewModel = SlideshowViewModel()
     #endif
     
     init(showAlbums: Bool = false, albumName: String? = nil, shared: Bool = false, query: Query? = nil, ascending: Binding<Bool>) {
@@ -115,7 +116,7 @@ struct AssetsView: View {
 #if targetEnvironment(macCatalyst)
                                     Button(action: {
                                         showSlide = true
-                                        itemId = item.id
+                                        slideshowViewModel.itemId = item.id
                                         slideActive = true
                                     }) {
                                         AssetCard(id: item.id).overlay(alignment: .bottomTrailing){
@@ -148,7 +149,7 @@ struct AssetsView: View {
 #if targetEnvironment(macCatalyst)
                             Button(action: {
                                 showSlide = true
-                                itemId = immichService.assetItems[index].id
+                                slideshowViewModel.itemId = immichService.assetItems[index].id
                                 slideActive = true
                             }) {
                                 AssetCard(id: immichService.assetItems[index].id).overlay(alignment: .bottomTrailing){
@@ -179,7 +180,7 @@ struct AssetsView: View {
             AlbumView(albumId: showAlbumId , albumName: showAlbumName, shared: shared).environmentObject(immichService).environmentObject(entitlementManager)
         }
         .fullScreenCover(isPresented: $showSlide, onDismiss: { slideActive = false }) {
-            SlideshowView(albumName: albumName, index: immichService.assetItems.firstIndex(where: { $0.id == itemId }), query: query).environmentObject(immichService).environmentObject(entitlementManager)
+            SlideshowView(albumName: albumName, index: immichService.assetItems.firstIndex(where: { $0.id == slideshowViewModel.itemId }), query: query).environmentObject(immichService).environmentObject(entitlementManager)
         }
         #endif
     }
@@ -204,6 +205,12 @@ struct AlbumTitle: View {
         }
     }
 }
+
+#if targetEnvironment(macCatalyst)
+class SlideshowViewModel: ObservableObject {
+    @Published var itemId: String = "" // Or whatever type item.id is
+}
+#endif
 
 extension Date {
     func adding(days: Int) -> Date {

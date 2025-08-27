@@ -121,7 +121,7 @@ struct MAC_IOSCommand: ViewModifier {
         content.onTapGesture(count: 1) {
             if zoomScale == minScale {
                 withAnimation {
-                    if playlistModel.isBarVisible {
+                    if playlistModel.showControls {
                         playlistModel.hideToolbar()
                     } else {
                         playlistModel.showToolbar()
@@ -130,9 +130,7 @@ struct MAC_IOSCommand: ViewModifier {
             }
         }
         .onTapGesture(count: 2) {
-            if !playlistModel.isBarVisible {
-                playlistModel.showVideoControls.toggle()
-            }
+            playlistModel.showControls.toggle()
         }
         .gesture(
            LongPressGesture(minimumDuration: 1)

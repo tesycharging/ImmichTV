@@ -16,33 +16,80 @@ import UIKit
 import Photos
 #endif
 
-enum ButtonFocus: Hashable {
-    case favorite
-    case original
-    case zoom
-    case download
+enum ButtonFocus: Hashable, CaseIterable {
+    case close
     case previous
     case playpause
     case next
-    case videobutton
-    case zoomout
+    case favorite
+    case original
+    case zoom
+    case setting
+    case player
     case image
-    case close
+    case originalVideo
     case none
+    
+    func image(_ status: Bool = true, _ active: Bool = false) -> Image {
+        switch self {
+        case .close: return Image(systemName: "x.circle")
+        case .previous: return Image(systemName: "chevron.left")
+        case .playpause: return Image(systemName: (status ? "play" : "pause"))
+        case .next: return Image(systemName: "chevron.right")
+        case .favorite: return Image(systemName: status ? "heart.fill" : "heart")
+        case .original: return Image(systemName: status ? (active ? "video.fill" : "video") : (active ? "photo.fill" : "photo"))
+        case .zoom: return Image(systemName: status ? "plus.magnifyingglass" : "minus.magnifyingglass")
+        case .setting: return Image(systemName: "gear")
+        default: return Image(systemName: "x.circle")
+        }
+    }
+    
+    // Computed property to get the next enum case
+    var next: ButtonFocus {
+        // Get all cases
+        let allCases = ButtonFocus.allCases
+        // Find the current case's index
+        guard let currentIndex = allCases.firstIndex(of: self) else {
+            return self // Fallback to self if index not found
+        }
+        // Calculate the next index, looping back to 0 if at the end
+        let nextIndex = (currentIndex + 1) % allCases.count
+        return allCases[nextIndex]
+    }
+    
+    // Computed property to get the previous enum case
+    var previous: ButtonFocus {
+        // Get all cases
+        let allCases = ButtonFocus.allCases
+        // Find the current case's index
+        guard let currentIndex = allCases.firstIndex(of: self) else {
+            return self // Fallback to self if index not found
+        }
+        // Calculate the next index, looping back to 0 if at the end
+        let nextIndex = ((currentIndex == 0 ? allCases.count : currentIndex) - 1) % allCases.count
+        return allCases[nextIndex]
+    }
 }
 
 struct SlideshowView: View {
     @EnvironmentObject private var immichService: ImmichService
     @EnvironmentObject private var entitlementManager: EntitlementManager
+    #if os(tvOS)
+    @EnvironmentObject private var storeManager: StoreManager
+    #endif
     let albumName: String?
     @State private var query: Query?
     @StateObject var playlistModel: PlaylistViewModel = PlaylistViewModel()
     
     @FocusState var focusedButton: ButtonFocus?
+    @State var lastFocusedButton: ButtonFocus?
+    @State var disableddButtons: [ButtonFocus] = []
     @Environment(\.dismiss) var dismiss // For dismissing the full-screen view
-    @State private var thumbnail = true
+    @State private var switchFromThumbnailToVideo = false
     @State private var isFavorite = false
+    @State private var isZoomed = false
     @State private var exifInfo: ExifInfo? = nil
+    @State private var showSetting = false
     
     #if os(tvOS)
     #else
@@ -81,6 +128,7 @@ struct SlideshowView: View {
     @State private var alertMessage = ""
     @State private var isSaving = false
     #endif
+    @State private var purchased = false // only tvOS can purchase it
     
     init(albumName: String? = nil, index: Int? = nil, query: Query? = nil) {
         self.albumName = albumName
@@ -120,18 +168,40 @@ struct SlideshowView: View {
     }
     
     private var isVideoAndPlayable: Bool {
-        return ((currentItem.type == .video && !thumbnail) ||
+        return ((currentItem.type == .video && !playlistModel.thumbnail) ||
                 (currentItem.type == .video && !entitlementManager.slideShowOfThumbnails && entitlementManager.playVideo))
-    }
-    
-    var isFavoritable: Bool {
-        !entitlementManager.demo && (currentItem.ownerId == immichService.user.id)
     }
     
     private var thumbnailShown: Bool {
         entitlementManager.slideShowOfThumbnails || (self.currentItem.type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails)
     }
+    
+    var hasFavoriteButton: Bool {
+        !entitlementManager.demo && (currentItem.ownerId == immichService.user.id)
+    }
+    
+    var hasOriginalButton: Bool {
+        (!isMac() || (isMac() && currentItem.type != .video)) && (entitlementManager.slideShowOfThumbnails || (currentItem.type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails))
+    }
   
+    var appinIsPurchased: Bool {
+        return true
+       /* #if os(tvOS)
+        if TARGET_OS_SIMULATOR == 1 {
+            return true
+        } else {
+            var result = false
+            storeManager.products.forEach { product in
+                if storeManager.isPurchased(product) {
+                    result = true
+                }
+            }
+            return result
+        }
+        #else
+        return true
+        #endif*/
+    }
     
      var body: some View {
          ZStack(alignment: .center) {
@@ -143,17 +213,17 @@ struct SlideshowView: View {
              } else {
                  if !isVideoAndPlayable {
                      GeometryReader { g in
-                         RetryableAsyncImage(url: immichService.getImageUrl(id: currentItem.id, thumbnail: entitlementManager.slideShowOfThumbnails && thumbnail, video: currentItem.type == .video), imageSize: $imageSize)
+                         RetryableAsyncImage(url: immichService.getImageUrl(id: currentItem.id, thumbnail: entitlementManager.slideShowOfThumbnails && playlistModel.thumbnail, video: currentItem.type == .video), imageSize: $imageSize, video: currentItem.type == .video)
                              .background(.black)
                              .scaleEffect(zoomScale)
-                             .focusable(playlistModel.isBarVisible ? false : true) // Only focus image when bar is hidden
+                             .focusable(playlistModel.showControls ? false : true) // Only focus image when bar is hidden
                              .focused($focusedButton, equals: .image)
                              .frame(maxWidth: .infinity, maxHeight: .infinity)
                              .offset(x: offset.width, y: offset.height)
 #if os(tvOS)
-                             .pinchToZoom(minScale: minScale, maxScale: maxScale, zoomScale: $zoomScale)
+                             .pinchToZoom(minScale: minScale, maxScale: maxScale, zoomScale: $zoomScale, playlistModel: playlistModel).disabled(!purchased || isVideoAndPlayable)
 #else
-                             .pinchToZoom(swipeOffset: $swipeOffset, imageSize: $imageSize, offset: $offset, minScale: minScale, maxScale: maxScale, zoomScale: $zoomScale, playlistModel: playlistModel, assetItemsCount: assetItemsCount)
+                             .pinchToZoom(swipeOffset: $swipeOffset, imageSize: $imageSize, offset: $offset, minScale: minScale, maxScale: maxScale, zoomScale: $zoomScale, playlistModel: playlistModel, assetItemsCount: assetItemsCount).disabled(isVideoAndPlayable)
 #endif
                              .overlay() {
                                  albumTitle
@@ -171,16 +241,25 @@ struct SlideshowView: View {
                          }
                          .onAppear {
                              isFavorite = currentItem.isFavorite
+                             if switchFromThumbnailToVideo {
+                                 switchFromThumbnailToVideo = false
+                                 playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
+                             }
+                             // Request focus when the view appears
+                             DispatchQueue.main.async {
+                                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                    let window = windowScene.windows.first {
+                                     window.rootViewController?.view.becomeFirstResponder()
+                                 }
+                             }
                          }
+                         .focusable(true) // Makes the view focusable on tvOS
+                         .focused($focusedButton, equals: .player)
                  }
                  // Transparent bar
-                 if playlistModel.isBarVisible {
-                     toolbarView
-                 } else {
-                     if zoomScale == minScale {
-                         videoButton
-                     } else {
-                         zoomOutButton
+                 if purchased {
+                     if playlistModel.showControls {
+                         toolbarView.padding(.top, isTVOS() ? 20 : 50).padding(.leading, isIOS() ? 10 : 20).padding(.trailing, isIOS() ? 10 : 20)
                      }
                  }
              }
@@ -210,23 +289,32 @@ struct SlideshowView: View {
                          exifInfo = currentItem.exifInfo
                      }
                      isFavorite = currentItem.isFavorite
-                     thumbnail = true
+                     playlistModel.thumbnail = true
                  }
                  if isVideoAndPlayable {
                      playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
                  } else if playlistModel.running {
-                        playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
+                     playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
                  }
              }
          }
-        #if os(tvOS)
-         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStepX: $offsetStepX, offsetStepY: $offsetStepY, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: isFavoritable, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding, isVideoAndPlayable: isVideoAndPlayable)
-        #else
+#if os(tvOS)
+         .onChange(of: focusedButton) { oldValue, _ in
+             lastFocusedButton = oldValue
+         }
+         .onChange(of: zoomScale) {
+             offset.width = 0
+             offset.height = 0
+             isZoomed = zoomScale != minScale
+         }
+         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStepX: $offsetStepX, offsetStepY: $offsetStepY, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: hasFavoriteButton, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding, lastFocusedButton: $lastFocusedButton, disableddButtons: $disableddButtons, isVideoAndPlayable: isVideoAndPlayable).disabled(!purchased)
+#else
          .offset(x: swipeOffset) // Moves the text based on swipe
          .mac_iosCommand(zoomScale: $zoomScale, swipeOffset: $swipeOffset, minScale: minScale, playlistModel: playlistModel, assetItemsCount: assetItemsCount)
-         #endif
+#endif
          .background(Color.black)
          .onAppear {
+             self.purchased = self.appinIsPurchased
              playlistModel.currentIndex = startIndex ?? 0
              playlistModel.running = startIndex == nil
              playlistModel.showToolbar()
@@ -237,166 +325,199 @@ struct SlideshowView: View {
              } else if isVideoAndPlayable {
                  playlistModel.playVideo(url: immichService.getVideoUrl(id: currentItem.id)!, count: assetItemsCount)
              }
-           }
+         }
          .onDisappear {
              playlistModel.deinitPlaylist()
          }
-         .animation(.easeInOut(duration: 1.0), value: playlistModel.isBarVisible)
+         .animation(.easeInOut(duration: 1.0), value: playlistModel.showControls)
+         .sheet(isPresented: $showSetting) {
+             ExifInfoView(currentItem: currentItem, exifInfo: exifInfo, index: self.playlistModel.currentIndex + 1, page: ((query?.page ?? 2) - 1))
+         }
+/*#if os(tvOS)
+         .overlay{
+             if !purchased {
+                 InAppPurchaseView(purchased: $purchased)
+             }
+         }
+#endif*/
      }
-
-
-////
-/// Toolbar
-///
+    
+    ////
+    /// Toolbar
+    ///
     var toolbarView: some View {
-        VStack(alignment: .center, spacing: 40) {
-            HStack(alignment: .top) {
-#if os(tvOS)
-#else
-                HStack {
-                    Button(action: {
-                        UIApplication.shared.isIdleTimerDisabled = false
-                        dismiss()
-                    }) {
-                        Image(systemName: "x.square")
-                    }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == ButtonFocus.close))
-                        .focused($focusedButton, equals: ButtonFocus.close)
-                }.padding()
-                    .background(Color.black.opacity(0.5)) // Transparent background
-                    .cornerRadius(15)
-                    .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                    .zIndex(1) // Ensure bar is above image
-                    .padding(.top, 20)
-#endif
-                Spacer()
-                VStack(alignment: .trailing) {
-                    HStack {
-                        if !entitlementManager.demo && (currentItem.ownerId == immichService.user.id){
-                            Button(action: {
-                                playlistModel.showToolbar()
-                                Task {@MainActor in
-                                    do {
-                                        let updatedAssetItem = try await immichService.updateAssets(id: currentItem.id, favorite: !currentItem.isFavorite)
-                                        guard !immichService.assetItems.isEmpty, playlistModel.currentIndex < immichService.assetItems.count else { return }
-                                        isFavorite = updatedAssetItem.isFavorite
-                                        immichService.assetItems.remove(at: playlistModel.currentIndex)
-                                        immichService.assetItems.insert(updatedAssetItem, at: playlistModel.currentIndex)
-                                    } catch {
-                                        print(error.localizedDescription)
-                                    }
-                                }
-                            }) {
-                                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .favorite))
-                                .focused($focusedButton, equals: .favorite)
-                        }
-                        if entitlementManager.slideShowOfThumbnails || (currentItem.type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails) {
-                            Button(action: {
-                                playlistModel.showToolbar()
-                                playlistModel.running = false
-                                playlistModel.pausePlaylist()
-                                thumbnail = false
-                            }) {
-                                Image(systemName: currentItem.type == .video ? "video" : "photo")
-                            }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .original))
-                                .focused($focusedButton, equals: .original)
-                        }
-                        Button(action: {
-                            zoomScale = maxScale
-                        }) {
-                            Image(systemName: "plus.magnifyingglass")
-                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .zoom))
-                            .focused($focusedButton, equals: .zoom)
-#if os(tvOS)
-#else
-#if targetEnvironment(macCatalyst)
-                        #else
-                        Button(action: {
-                            Task { @MainActor in
-                                do {
-                                    downloading = true
-                                    if currentItem.type == .image {
-                                        alertMessage = try await immichService.downloadImage(currentIndex: playlistModel.currentIndex)
-                                    } else {
-                                        alertMessage = try await immichService.downloadVideo(currentIndex: playlistModel.currentIndex)
-                                    }
-                                } catch {
-                                    alertMessage = error.localizedDescription
-                                }
-                                downloading = false
-                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2) {
-                                    showAlert = true
-                                }
-                            }
-                        }) {
-                            Image(systemName: "arrow.down.app")
-                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .download))
-                            .focused($focusedButton, equals: .download)
-                            .alert(isPresented: $showAlert) {
-                                Alert(title: Text("Save Image"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-                            }
-                        #endif
-                        #endif
-                    }.padding()
-                        .background(Color.black.opacity(0.5)) // Transparent background
-                        .cornerRadius(15)
-                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                        .zIndex(1) // Ensure bar is above image
-                        .padding(.top, 20)
-                        .progressView(isPresented: $downloading, message: "downloading")
-                    HStack {
-                        if exifInfo != nil {
-                            exifInfoView(exifInfo: exifInfo!, index: self.playlistModel.currentIndex + 1, page: ((query?.page ?? 2) - 1))
-                        }
-                    }.padding()
-                        .background(Color.black.opacity(0.5)) // Transparent background
-                        .cornerRadius(15)
-                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                        .zIndex(1) // Ensure bar is above image
-                }
-            }
-            Spacer()
-            HStack(alignment: .bottom){
+        // Custom navigation buttons
+        VStack(alignment: .leading) {
+            HStack(spacing: isIOS() ? 10 : 20) {
+               // Close button
+               Button(action: {
+                   UIApplication.shared.isIdleTimerDisabled = false
+                   dismiss()
+               }){
+                   ButtonFocus.close.image()
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == ButtonFocus.close, isDisabled: isZoomed))
+                   .focused($focusedButton, equals: ButtonFocus.close)
+                   .disabled(isZoomed)
+              
+               // Previous button
+               Button(action: {
+                   playlistModel.showToolbar()
+                   playlistModel.previousItem(count: immichService.assetItems.count)
+               }){
+                   ButtonFocus.previous.image()
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == ButtonFocus.previous, isDisabled: isZoomed))
+                   .focused($focusedButton, equals: ButtonFocus.previous)
+                   .disabled(isZoomed)
+               
+               // Play/Pause button
+               Button(action: {
+                   playlistModel.showToolbar()
+                   playlistModel.running.toggle()
+                   if !isVideoAndPlayable {
+                       if playlistModel.running {
+                           playlistModel.showAlbumName = true
+                           playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
+                       } else {
+                           playlistModel.pausePlaylist()
+                       }
+                   }
+               }) {
+                   ButtonFocus.playpause.image(!playlistModel.running)
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .playpause, isDisabled: isZoomed))
+                   .focused($focusedButton, equals: .playpause)
+                   .disabled(isZoomed)
+               
+               // Next button
+               Button(action: {
+                   playlistModel.showToolbar()
+                   playlistModel.nextItem(count: immichService.assetItems.count)
+               }) {
+                   ButtonFocus.next.image()
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .next, isDisabled: isZoomed))
+                   .focused($focusedButton, equals: .next)
+                   .disabled(isZoomed)
+               
+               Spacer()
+               
+               // Favorite button
+               Button(action: {
+                   playlistModel.showToolbar()
+                   Task {@MainActor in
+                       do {
+                           let updatedAssetItem = try await immichService.updateAssets(id: currentItem.id, favorite: !currentItem.isFavorite)
+                           guard !immichService.assetItems.isEmpty, playlistModel.currentIndex < immichService.assetItems.count else { return }
+                           isFavorite = updatedAssetItem.isFavorite
+                           immichService.assetItems.remove(at: playlistModel.currentIndex)
+                           immichService.assetItems.insert(updatedAssetItem, at: playlistModel.currentIndex)
+                       } catch {
+                           print(error.localizedDescription)
+                       }
+                   }
+               }) {
+                   ButtonFocus.favorite.image(isFavorite)
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .favorite, isDisabled: !hasFavoriteButton || isZoomed))
+                   .focused($focusedButton, equals: .favorite)
+                   .disabled(!hasFavoriteButton || isZoomed)
+               
+               // Original button (show video or pic)
+               Button(action: {
+                   if !isMac() || currentItem.type != .video {
+                       playlistModel.showToolbar()
+                       playlistModel.running = false
+                       playlistModel.pausePlaylist()
+                       playlistModel.thumbnail.toggle()
+                       if currentItem.type == .video {
+                           switchFromThumbnailToVideo = true
+                       }
+                   }
+               }) {
+                   ButtonFocus.original.image(currentItem.type == .video, !playlistModel.thumbnail)
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .original, isDisabled: (disableddButtons.contains(.original) && currentItem.type != .video) || (disableddButtons.contains(.originalVideo) && currentItem.type == .video) || isZoomed))
+                   .focused($focusedButton, equals: .original)
+                   .disabled((disableddButtons.contains(.original) && currentItem.type != .video) || (disableddButtons.contains(.originalVideo) && currentItem.type == .video) || isZoomed)
+               
+               // Zoom button
+               Button(action: {
+                   isZoomed = zoomScale == minScale
+                   zoomScale = isZoomed ? maxScale : minScale
+                   playlistModel.showToolbar()
+               }) {
+                   ButtonFocus.zoom.image(zoomScale == minScale)
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .zoom, isDisabled: isVideoAndPlayable))
+                   .focused($focusedButton, equals: .zoom)
+                   .disabled(isVideoAndPlayable)
+               
+               // Download button
+                #if os(tvOS)
+                #else
+                #if targetEnvironment(macCatalyst)
+                #else
                 Button(action: {
-                    playlistModel.showToolbar()
-                    playlistModel.previousItem(count: immichService.assetItems.count)
-                    //self.goToPreviousItem()
-                }) {
-                    Image(systemName: "backward.frame").padding(.horizontal, 30)
-                }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .previous))
-                    .focused($focusedButton, equals: .previous)
-                Button(action: {
-                    playlistModel.showToolbar()
-                    playlistModel.running.toggle()
-                    if !isVideoAndPlayable {
-                        if playlistModel.running {
-                            playlistModel.showAlbumName = true
-                            playlistModel.startImageTimer(duration: entitlementManager.timeinterval, count: assetItemsCount)
-                        } else {
-                            playlistModel.pausePlaylist()
+                    Task { @MainActor in
+                        do {
+                            downloading = true
+                            if currentItem.type == .image {
+                                alertMessage = try await immichService.downloadImage(currentIndex: playlistModel.currentIndex)
+                            } else {
+                                alertMessage = try await immichService.downloadVideo(currentIndex: playlistModel.currentIndex)
+                            }
+                        } catch {
+                            alertMessage = error.localizedDescription
+                        }
+                        downloading = false
+                        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2) {
+                            showAlert = true
                         }
                     }
                 }) {
-                    Image(systemName: (!playlistModel.running ? "play" : "pause")).padding(.horizontal, 30)
-                }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .playpause))
-                    .focused($focusedButton, equals: .playpause)
-                Button(action: {
-                    playlistModel.showToolbar()
-                    playlistModel.nextItem(count: immichService.assetItems.count)
-                    //self.goToNextItem()
-                }) {
-                    Image(systemName: "forward.frame").padding(.horizontal, 30)
-                }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .next))
-                    .focused($focusedButton, equals: .next)
-            }.padding()
-                .background(Color.black.opacity(0.5)) // Transparent background
-                .cornerRadius(15)
-                .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                .zIndex(1) // Ensure bar is above image
-                .padding(.bottom, 10)
+                    Image(systemName: "arrow.down.app")
+                }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == ButtonFocus.none, isDisabled: isZoomed))
+                    .disabled(isZoomed)
+                    .alert(isPresented: $showAlert) {
+                        Alert(title: Text("Save Image"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+                    }
+                    .progressView(isPresented: $downloading, message: "downloading")
+                #endif
+                #endif
+               
+               // Setting Button
+               Button(action: {
+                   showSetting.toggle()
+               }) {
+                   ButtonFocus.setting.image()
+               }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == .setting, isDisabled: isZoomed))
+                   .focused($focusedButton, equals: .setting)
+                   .disabled(isZoomed)
+           }
+           .padding(.bottom, 40) // Space from bottom for better visibility
+            Spacer()
         }.onAppear {
-            #if os(tvOS)
             focusedButton = .playpause
+            disableddButtons.append(ButtonFocus.player)
+            disableddButtons.append(ButtonFocus.image)
+            disableddButtons.append(ButtonFocus.none)
+            if !hasFavoriteButton {
+                disableddButtons.append(ButtonFocus.favorite)
+            } else {
+                disableddButtons.removeAll { $0 == ButtonFocus.favorite }
+            }
+            if !entitlementManager.slideShowOfThumbnails {
+                disableddButtons.append(ButtonFocus.original)
+            } else {
+                disableddButtons.removeAll { $0 == ButtonFocus.original }
+            }
+            #if targetEnvironment(macCatalyst)
+            disableddButtons.append(ButtonFocus.originalVideo)
+            #else
+            if entitlementManager.slideShowOfThumbnails {
+                disableddButtons.removeAll { $0 == ButtonFocus.originalVideo }
+            } else {
+                if  entitlementManager.playVideo {
+                    disableddButtons.append(ButtonFocus.originalVideo)
+                } else {
+                    disableddButtons.removeAll { $0 == ButtonFocus.originalVideo }
+                }
+            }
             #endif
             if currentItem.exifInfo == nil {
                 Task {
@@ -407,126 +528,50 @@ struct SlideshowView: View {
             } else {
                 exifInfo = currentItem.exifInfo!
             }
-        }
-    }
-    
-    func exifInfoView(exifInfo: ExifInfo, index: Int, page: Int) -> some View {
-        VStack(alignment: .trailing) {
-            Text("\(currentItem.originalFileName) #\(index) of Page \(page)").font(.caption).foregroundColor(.white.opacity(0.8))
-            if let result = location(exifInfo: exifInfo) {
-                Text("\(result)").font(.caption).foregroundColor(.white.opacity(0.8))
+        }.onChange(of: hasFavoriteButton) { _, newValue in
+            if !newValue {
+                disableddButtons.append(ButtonFocus.favorite)
+            } else {
+                disableddButtons.removeAll { $0 == ButtonFocus.favorite }
             }
-            if exifInfo.latitude != nil && exifInfo.longitude != nil {
-                Text("GPS: \(exifInfo.latitude!): \(exifInfo.longitude!)").font(.caption).foregroundColor(.white.opacity(0.8))
-            }
-            if exifInfo.dateTimeOriginal != nil {
-                Text("\(convertToDate(from: exifInfo.dateTimeOriginal!) ?? "")").font(.caption).foregroundColor(.white.opacity(0.8))
-            }
-            if let cam = camera(exifInfo: exifInfo) {
-                Text("\(cam)").font(.caption).foregroundColor(.white.opacity(0.8))
+        }.onChange(of: isVideoAndPlayable) { _, newValue in
+            if newValue {
+                disableddButtons.append(ButtonFocus.zoom)
+            } else {
+                disableddButtons.removeAll { $0 == ButtonFocus.zoom }
             }
         }
-    }
+   }
+}
+
+
+struct SlideShowButton: View {
+    let icon: String
+    let action: () -> Void
+    @FocusState var focusedButton: ButtonFocus?
+    let isDisabled: Bool
     
-    func location(exifInfo: ExifInfo) -> String? {
-        var result: String?
-        if let city = exifInfo.city {
-            result = city
-        }
-        if let country = exifInfo.country {
-            result = result == nil ? country : "\(result!), \(country)"
-        }
-        return result
-    }
+    @Environment(\.isFocused) var isFocused // Detect focus on tvOS
     
-    func camera(exifInfo: ExifInfo) -> String? {
-        var result: String?
-        if let make = exifInfo.make {
-            result = make
-        }
-        if let model = exifInfo.model {
-            result = result == nil ? model : "\(result!), \(model)"
-        }
-        return result
-    }
-    
-    func convertToDate(from dateString: String) -> String? {
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date =  isoFormatter.date(from: dateString) else { return nil }
-        
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long    // e.g., "March 15, 2025"
-        formatter.timeStyle = .medium  // e.g., "4:45:11 PM"
-        formatter.timeZone = TimeZone(identifier: "UTC") // Match the +00:00 offset
-        return formatter.string(from: date)
-    }
-    
-    var showVideoButton: Bool {
-        if (currentItem.type == .video && thumbnail && (entitlementManager.slideShowOfThumbnails || (!entitlementManager.slideShowOfThumbnails && !entitlementManager.playVideo))) {
-            focusedButton = .videobutton
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    //if video is not played automatic, this button let it play and/or stops the slideshow.
-    //This button is showed when the type is "video"
-    var videoButton: some View {
-        VStack(alignment: .center, spacing: 40) {
-            HStack(alignment: .top) {
-                Spacer()
-                VStack(alignment: .trailing) {
-                    HStack {
-                        if (showVideoButton) {
-                            Button(action: {
-                                playlistModel.hideToolbar()
-                                playlistModel.pausePlaylist()
-                                thumbnail = false
-                            }) {
-                                Image(systemName: currentItem.type == .video ? "video" : "photo")
-                            }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .videobutton))
-                                .focused($focusedButton, equals: .videobutton)
-                        }
-                    }.padding()
-                        .background(Color.black.opacity(0.5)) // Transparent background
-                        .cornerRadius(15)
-                        .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                        .zIndex(1) // Ensure bar is above image
-                        .padding(.top, 20)
-                }
-            }
-            Spacer()
-        }
-    }
-    
-    var zoomOutButton: some View {
-        VStack(alignment: .center, spacing: 40) {
-            HStack(alignment: .top) {
-                Spacer()
-                HStack {
-                    VStack(alignment: .trailing) {
-                        Button(action: {
-                            zoomScale = minScale
-                            playlistModel.showToolbar()
-                        }) {
-                            Image(systemName: "minus.magnifyingglass")
-                        }.buttonStyle(ImmichTVSlideShowButtonStyle(isFocused: focusedButton == .zoomout))
-                            .focused($focusedButton, equals: .zoomout)
-                            .onAppear{
-                                focusedButton = .zoomout
-                            }
-                    }
-                }.padding()
-                    .background(Color.black.opacity(0.5)) // Transparent background
-                    .cornerRadius(15)
-                    .transition(.move(edge: .bottom).combined(with: .opacity)) // Slide and fade
-                    .zIndex(1) // Ensure bar is above image
-                    .padding(.top, 20)
-            }
-            Spacer()
-        }
+    var body: some View {
+        Button(action: action){
+            Image(systemName: icon).resizable().scaledToFit().frame(width: isIOS() ? 32 : 80, height: isIOS() ? 32 : 80)
+        }.buttonStyle(FancySlideShowButtonStyle(isFocused: focusedButton == ButtonFocus.close, isDisabled: isDisabled))
+            .focused($focusedButton, equals: ButtonFocus.close)
     }
 }
 
+struct FancySlideShowButtonStyle: ButtonStyle {
+    let isFocused: Bool
+    let isDisabled: Bool
+    
+    func makeBody(configuration: Self.Configuration) -> some View {
+        configuration.label.disabled(isDisabled)
+            .scaledToFit().frame(width: configuration.label.isIOS() ? 32 : 80, height: configuration.label.isIOS() ? 32 : 80)
+            .foregroundColor(isFocused || configuration.isPressed ? .black : (isDisabled ? .black.opacity(0.5): .white))
+            .background(Color.white.opacity(isFocused || configuration.isPressed ? 1.0 : 0.2))
+            .clipShape(Circle())
+            .shadow(color: .white.opacity(isFocused || configuration.isPressed ? 1.0 : 0.2), radius: 5, x: 0, y: 2)
+            .focusable(configuration.label.isTVOS())
+    }
+}

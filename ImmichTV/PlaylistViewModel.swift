@@ -19,14 +19,16 @@ struct AVPlayerView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
         controller.player = player
-        controller.showsPlaybackControls = playlistModel.showVideoControls // Set initial control visibility
-        controller.videoGravity = .resizeAspectFill
+        controller.videoGravity = .resizeAspect // Maintains aspect ratio
+        controller.showsPlaybackControls = playlistModel.showControls // Set initial control visibility
+        controller.allowsPictureInPicturePlayback = false // Optional: Disable PiP for focus clarity
+               
         return controller
     }
     
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
         // Update control visibility when showControls changes
-        uiViewController.showsPlaybackControls = playlistModel.showVideoControls
+        uiViewController.showsPlaybackControls = playlistModel.showControls
     }
 }
 
@@ -42,9 +44,9 @@ class PlaylistViewModel: ObservableObject {
     private var timeRemaining = 0 // Initial timer duration in seconds
     private var timeToolbar: Timer?
     private var hasVideoContronls = false
-    @Published var showVideoControls = false // Controls video buttons visibilty
-    @Published var isBarVisible: Bool = false // Controls bar visibility
+    @Published var showControls: Bool = false // Controls bar visibility
     @Published var showAlbumName = true
+    @Published var thumbnail = true
     @Published var running = true {
         didSet {
             UIApplication.shared.isIdleTimerDisabled = running
@@ -135,6 +137,7 @@ class PlaylistViewModel: ObservableObject {
     
     // Move to next item in playlist
     func nextItem(count: Int) {
+        thumbnail = true
         player.pause()
         isVideoPlaying = false
         timer?.invalidate()
@@ -143,6 +146,7 @@ class PlaylistViewModel: ObservableObject {
     
     // Move to previous item in playlist
     func previousItem(count: Int) {
+        thumbnail = true
         player.pause()
         isVideoPlaying = false
         timer?.invalidate()
@@ -177,16 +181,8 @@ class PlaylistViewModel: ObservableObject {
     
     // Start the timer
     func showToolbar() {
-        if isBarVisible {
-            self.timeRemaining += 10
-        } else {
-            self.timeRemaining = 10
-            if isVideoPlaying && hasVideoContronls {
-                showVideoControls = true
-            } else {
-                isBarVisible = true
-            }
-        }
+        self.timeRemaining = 10
+        showControls = true // fi showCOntrols already active, set the remaining time again to 10s
         if timeToolbar == nil || !(timeToolbar?.isValid ?? true) {
             // Create a timer that fires every second
             timeToolbar = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
@@ -200,10 +196,8 @@ class PlaylistViewModel: ObservableObject {
     }
     
     func hideToolbar() {
-        self.isBarVisible = false
+        self.showControls = false
         self.showAlbumName = false
-        self.hasVideoContronls.toggle()
-        self.showVideoControls = false
         self.timeToolbar?.invalidate()
         self.timeToolbar = nil
         self.timeRemaining = 0

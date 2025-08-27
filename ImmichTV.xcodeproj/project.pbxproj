@@ -36,6 +36,7 @@
 				ContentView.swift,
 				DateSelectionView.swift,
 				EntitlementManager.swift,
+				ExifInfoView.swift,
 				ImmichService.swift,
 				ImmichTVApp.swift,
 				Model.swift,
@@ -361,7 +362,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -375,7 +376,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 202508;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
@@ -394,7 +395,7 @@
 				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = "App Icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -408,7 +409,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 202508;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
@@ -428,7 +429,7 @@
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -451,7 +452,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 18;
+				MARKETING_VERSION = 202508;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -474,7 +475,7 @@
 				CODE_SIGN_ENTITLEMENTS = ImmichShow.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"ImmichTV/Preview Content\"";
 				DEVELOPMENT_TEAM = 99C554436R;
 				ENABLE_PREVIEWS = YES;
@@ -497,7 +498,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 18;
+				MARKETING_VERSION = 202508;
 				PRODUCT_BUNDLE_IDENTIFIER = com.david.tesychargingng.ImmichTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

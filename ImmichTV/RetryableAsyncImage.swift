@@ -12,6 +12,7 @@ struct RetryableAsyncImage: View {
     var tilewidth: CGFloat = 0
     @State private var retryCount = 0
     @Binding var imageSize: CGSize
+    var video: Bool = false
     
     func isSlide(image: Image) -> Bool {
         imageSize = image.asUIImage()?.size ?? CGSizeZero
@@ -41,6 +42,11 @@ struct RetryableAsyncImage: View {
                         .background(.black)
                         .onAppear {
                             imageSize = image.asUIImage()?.size ?? CGSizeZero
+                        }
+                        .overlay(alignment: .bottomTrailing){
+                            if video {
+                                Image(systemName: "video").background(.black.opacity(0.5)).foregroundColor(.white.opacity(0.8))
+                            }
                         }
                 }
             case .failure(let error):

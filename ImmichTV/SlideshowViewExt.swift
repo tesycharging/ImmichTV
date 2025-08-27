@@ -38,3 +38,34 @@ extension View {
         }
     }
 }
+
+extension View {
+    func isMac() -> Bool {
+        #if targetEnvironment(macCatalyst)
+        return true
+        #else
+        return false
+        #endif
+    }
+    
+    func isTVOS() -> Bool {
+        #if os(tvOS)
+        return true
+        #else
+        return false
+        #endif
+    }
+    
+    func isIOS() -> Bool {
+        #if os(tvOS)
+        return false
+        #else
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        return true
+        #endif
+        #endif
+    }
+}
+
