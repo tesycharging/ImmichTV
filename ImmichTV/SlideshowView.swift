@@ -74,9 +74,9 @@ enum ButtonFocus: Hashable, CaseIterable {
 struct SlideshowView: View {
     @EnvironmentObject private var immichService: ImmichService
     @EnvironmentObject private var entitlementManager: EntitlementManager
-    #if os(tvOS)
+    /*#if os(tvOS)
     @EnvironmentObject private var storeManager: StoreManager
-    #endif
+    #endif*/
     let albumName: String?
     @State private var query: Query?
     @StateObject var playlistModel: PlaylistViewModel = PlaylistViewModel()
@@ -101,8 +101,9 @@ struct SlideshowView: View {
     @State var zoomScale: CGFloat = 1.0 {
         didSet {
             if zoomScale == minScale {
-                offsetStepX = 0
-                offsetStepY = 0
+#if os(tvOS)
+                offsetStep = .zero
+#endif
                 offset = .zero
             } else {
                 playlistModel.hideToolbar()
@@ -112,8 +113,7 @@ struct SlideshowView: View {
     }
     let minScale: CGFloat = 1.0
     let maxScale: CGFloat = 5.0
-    @State var offsetStepX: CGFloat = 0
-    @State var offsetStepY: CGFloat = 0
+
     @State var imageSize: CGSize = CGSizeZero
     @State var slideSize: CGSize = CGSizeZero
     @State var offset: CGSize = .zero
@@ -123,12 +123,13 @@ struct SlideshowView: View {
     /// Toolbar
     @State private var downloading = false
     #if os(tvOS)
+    @State var offsetStep: CGSize = CGSizeZero
     #else
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isSaving = false
     #endif
-    @State private var purchased = false // only tvOS can purchase it
+    @State private var purchased = true // only tvOS can purchase it
     
     init(albumName: String? = nil, index: Int? = nil, query: Query? = nil) {
         self.albumName = albumName
@@ -182,25 +183,6 @@ struct SlideshowView: View {
     
     var hasOriginalButton: Bool {
         (!isMac() || (isMac() && currentItem.type != .video)) && (entitlementManager.slideShowOfThumbnails || (currentItem.type == .video && !entitlementManager.playVideo && !entitlementManager.slideShowOfThumbnails))
-    }
-  
-    var appinIsPurchased: Bool {
-        return true
-       /* #if os(tvOS)
-        if TARGET_OS_SIMULATOR == 1 {
-            return true
-        } else {
-            var result = false
-            storeManager.products.forEach { product in
-                if storeManager.isPurchased(product) {
-                    result = true
-                }
-            }
-            return result
-        }
-        #else
-        return true
-        #endif*/
     }
     
      var body: some View {
@@ -307,14 +289,16 @@ struct SlideshowView: View {
              offset.height = 0
              isZoomed = zoomScale != minScale
          }
-         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStepX: $offsetStepX, offsetStepY: $offsetStepY, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: hasFavoriteButton, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding, lastFocusedButton: $lastFocusedButton, disableddButtons: $disableddButtons, isVideoAndPlayable: isVideoAndPlayable).disabled(!purchased)
+         .tvOSCommand(timeinterval: entitlementManager.timeinterval, zoomScale: $zoomScale, minScale: minScale, maxScale: maxScale, slideSize: $slideSize, offsetStep: $offsetStep, imageSize: $imageSize, offset: $offset, playlistModel: playlistModel, assetItemsCount: assetItemsCount, isFavoritable: hasFavoriteButton, thumbnailShown: thumbnailShown, focusedButton: focusedButtonBinding, lastFocusedButton: $lastFocusedButton, disableddButtons: $disableddButtons, isVideoAndPlayable: isVideoAndPlayable).disabled(!purchased)
 #else
          .offset(x: swipeOffset) // Moves the text based on swipe
          .mac_iosCommand(zoomScale: $zoomScale, swipeOffset: $swipeOffset, minScale: minScale, playlistModel: playlistModel, assetItemsCount: assetItemsCount)
 #endif
          .background(Color.black)
          .onAppear {
-             self.purchased = self.appinIsPurchased
+             /*#if os(tvOS)
+             self.purchased = storeManager.appinIsPurchased
+             #endif*/
              playlistModel.currentIndex = startIndex ?? 0
              playlistModel.running = startIndex == nil
              playlistModel.showToolbar()

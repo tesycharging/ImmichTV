@@ -31,8 +31,7 @@ struct TVOSCommand: ViewModifier {
     var minScale: CGFloat
     var maxScale: CGFloat
     @Binding var slideSize: CGSize
-    @Binding var offsetStepX: CGFloat
-    @Binding var offsetStepY: CGFloat
+    @Binding var offsetStep: CGSize
     @Binding var imageSize: CGSize
     @Binding var offset: CGSize
     @ObservedObject var playlistModel: PlaylistViewModel
@@ -44,70 +43,39 @@ struct TVOSCommand: ViewModifier {
     @Binding var disableddButtons: [ButtonFocus]
     var isVideoAndPlayable: Bool
     
+    func calculateOffset(step: CGFloat, imageDim: CGSize, slideDim: CGSize) -> CGFloat {
+        let maxStep: CGFloat = (maxScale - minScale) / 2
+        let isPortrait = imageDim.height > imageDim.width
+        if !isPortrait {
+            return slideDim.width * step
+        } else {
+            let black = step > 0 ? (slideDim.width - imageDim.width / (imageDim.height / slideDim.height)) / 2 : (slideDim.width - imageDim.width / (imageDim.height / slideDim.height)) / -2
+            let scaled = imageDim.width / (imageDim.height / slideDim.height) * zoomScale
+            if (scaled / slideDim.width) <= 1 || step == 0 {
+                return 0
+            } else if (scaled / slideDim.width) <= (maxStep + 1) || step == maxStep {
+                return black == 0 ? black + step * slideDim.width : black
+            } else {
+                return black + step * slideDim.width
+            }
+        }
+    }
+    
     func zoomOffset(direction: MoveCommandDirection) {
         let maxOffsetStep: CGFloat = (maxScale - minScale) / 2
-        let isPortrait = imageSize.height > imageSize.width
         switch direction {
         case .left:
-            offsetStepX = offsetStepX == maxOffsetStep ? maxOffsetStep : offsetStepX + 1
-            if !isPortrait {
-                offset.width = slideSize.width * offsetStepX
-            } else {
-                let blackX = offsetStepX > 0 ? (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / 2 : (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / -2
-                let width = imageSize.width / (imageSize.height / slideSize.height) * zoomScale
-                if (width / slideSize.width) <= 1 || offsetStepX == 0 {
-                    offset.width = 0
-                } else if (width / slideSize.width) <= (maxOffsetStep + 1) || offsetStepX == maxOffsetStep {
-                    offset.width = blackX == 0 ? blackX + offsetStepX * slideSize.width : blackX
-                } else {
-                    offset.width = blackX + offsetStepX * slideSize.width
-                }
-            }
+            offsetStep.width = offsetStep.width == maxOffsetStep ? maxOffsetStep : offsetStep.width + 1
+            offset.width = calculateOffset(step: offsetStep.width, imageDim: imageSize, slideDim: slideSize)
         case .right:
-            offsetStepX = offsetStepX == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepX - 1
-            if !isPortrait {
-                offset.width = slideSize.width * offsetStepX
-            } else {
-                let blackX = offsetStepX > 0 ? (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / 2 : (slideSize.width - imageSize.width / (imageSize.height / slideSize.height)) / -2
-                let width = imageSize.width / (imageSize.height / slideSize.height) * zoomScale
-                if (width / slideSize.width) <= 1 || offsetStepX == 0 {
-                    offset.width = 0
-                } else if (width / slideSize.width) <= (maxOffsetStep + 1) || offsetStepX == maxOffsetStep {
-                    offset.width = blackX == 0 ? blackX + offsetStepX * slideSize.width : blackX
-                } else {
-                    offset.width = blackX + offsetStepX * slideSize.width
-                }
-            }
+            offsetStep.width = offsetStep.width == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStep.width - 1
+            offset.width = calculateOffset(step: offsetStep.width, imageDim: imageSize, slideDim: slideSize)
         case .up:
-            offsetStepY = offsetStepY == maxOffsetStep ? maxOffsetStep : offsetStepY + 1
-            if isPortrait {
-                offset.height = slideSize.height * offsetStepY
-            } else {
-                let blackY = offsetStepY > 0 ? (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / 2 : (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / -2
-                let height = imageSize.height / (imageSize.width / slideSize.width) * zoomScale
-                if (height / slideSize.height) <= 1 || offsetStepY == 0 {
-                    offset.height = 0
-                } else if (height / slideSize.height) <= (maxOffsetStep + 1) || offsetStepY == maxOffsetStep {
-                    offset.height = blackY == 0 ? blackY + offsetStepY * slideSize.height : blackY
-                } else {
-                    offset.height = blackY + offsetStepY * slideSize.height
-                }
-            }
+            offsetStep.height = offsetStep.height == maxOffsetStep ? maxOffsetStep : offsetStep.height + 1
+            offset.height = calculateOffset(step: offsetStep.height, imageDim: imageSize.swapped, slideDim: slideSize.swapped)
         case .down:
-            offsetStepY = offsetStepY == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStepY - 1
-            if isPortrait {
-                offset.height = slideSize.height * offsetStepY
-            } else {
-                let blackY = offsetStepY > 0 ? (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / 2 : (slideSize.height - imageSize.height / (imageSize.width / slideSize.width)) / -2
-                let height = imageSize.height / (imageSize.width / slideSize.width) * zoomScale
-                if (height / slideSize.height) <= 1 || offsetStepY == 0 {
-                    offset.height = 0
-                } else if (height / slideSize.height) <= (maxOffsetStep + 1) || offsetStepY == maxOffsetStep {
-                    offset.height = blackY == 0 ? blackY + offsetStepY * slideSize.height : blackY
-                } else {
-                    offset.height = blackY + offsetStepY * slideSize.height
-                }
-            }
+            offsetStep.height = offsetStep.height == (-1 * maxOffsetStep) ? -maxOffsetStep : offsetStep.height - 1
+            offset.height = calculateOffset(step: offsetStep.height, imageDim: imageSize.swapped, slideDim: slideSize.swapped)
         @unknown default:
             break
         }
@@ -239,8 +207,7 @@ extension View {
         minScale: CGFloat,
         maxScale: CGFloat,
         slideSize: Binding<CGSize>,
-        offsetStepX: Binding<CGFloat>,
-        offsetStepY: Binding<CGFloat>,
+        offsetStep: Binding<CGSize>,
         imageSize: Binding<CGSize>,
         offset: Binding<CGSize>,
         playlistModel: PlaylistViewModel,
@@ -258,8 +225,7 @@ extension View {
             minScale: minScale,
             maxScale: maxScale,
             slideSize: slideSize,
-            offsetStepX: offsetStepX,
-            offsetStepY: offsetStepY,
+            offsetStep: offsetStep,
             imageSize: imageSize,
             offset: offset,
             playlistModel: playlistModel,
@@ -271,5 +237,11 @@ extension View {
             disableddButtons: disableddButtons,
             isVideoAndPlayable: isVideoAndPlayable)
         )
+    }
+}
+
+extension CGSize {
+    var swapped: CGSize {
+        CGSize(width: height, height: width)
     }
 }
